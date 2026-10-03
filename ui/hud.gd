@@ -1,6 +1,6 @@
 extends CanvasLayer
 ## Everything on screen while you hunt: the compass and the wind, the glass
-## and the scope, what your shot hit, your pack, your rank, Mae on the radio.
+## and the scope, what your shot hit, your pack, your rank, Blorvak on the radio, Dale in your ear.
 
 var world: Node
 var root: Control
@@ -146,7 +146,7 @@ func setup(w: Node) -> void:
 	banner_sub.position = Vector2(-500, 214)
 	banner_sub.custom_minimum_size = Vector2(1000, 0)
 	root.add_child(banner_sub)
-	# Mae.
+	# Blorvak, on the radio.
 	radio_box = PanelContainer.new()
 	radio_box.add_theme_stylebox_override("panel", UIStyle.panel(Color(0.05, 0.08, 0.07, 0.9), Color(0.3, 0.8, 0.6, 0.7)))
 	radio_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -156,7 +156,7 @@ func setup(w: Node) -> void:
 	root.add_child(radio_box)
 	var rv := VBoxContainer.new()
 	radio_box.add_child(rv)
-	rv.add_child(UIStyle.label("MAE  ·  TRADING NET", 14, UIStyle.TEAL, UIStyle.bold()))
+	rv.add_child(UIStyle.label("COMMISSIONER BLORVAK  ·  XHUUL HORN EXCHANGE", 14, UIStyle.TEAL, UIStyle.bold()))
 	radio_lbl = UIStyle.label("", 18, UIStyle.BONE, UIStyle.body())
 	radio_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	radio_lbl.custom_minimum_size = Vector2(730, 0)
@@ -207,7 +207,7 @@ func _toast(t: String, c: Color) -> void:
 
 func hit_marker(res: Dictionary, dist: float) -> void:
 	var o: String = res.get("organ", "")
-	var col := {"HEART": Color(1.0, 0.25, 0.35), "BRAIN": Color(1.0, 0.3, 0.9), "SPINE": Color(1.0, 0.6, 0.2), "LUNGS": Color(0.4, 0.8, 1.0), "GUT": Color(0.8, 0.75, 0.3), "NECK": Color(1.0, 0.7, 0.5)}.get(o, Color(0.9, 0.9, 0.85)) as Color
+	var col := {"HEADSHOT": Color(1.0, 0.3, 0.3), "HEART": Color(1.0, 0.25, 0.35), "BRAIN": Color(1.0, 0.3, 0.9), "SPINE": Color(1.0, 0.6, 0.2), "LUNGS": Color(0.4, 0.8, 1.0), "GUT": Color(0.8, 0.75, 0.3), "NECK": Color(1.0, 0.7, 0.5)}.get(o, Color(0.9, 0.9, 0.85)) as Color
 	hit_lbl.text = "%s   %d m" % [o, int(dist)]
 	hit_lbl.add_theme_color_override("font_color", col)
 	_hit_t = 2.0
@@ -229,6 +229,37 @@ func radio(msg: String) -> void:
 	_radio_shown = 0.0
 	_radio_t = 8.0 + msg.length() * 0.05
 	radio_box.visible = true
+
+
+var _sub_lbl: Label = null
+var _sub_t := 0.0
+var _alert_t := 0.0
+
+
+## Someone talking: a subtitle at the bottom of the screen.
+func subtitle(who: String, text: String, col: Color, secs: float = 0.0) -> void:
+	if _sub_lbl == null:
+		_sub_lbl = UIStyle.label("", 20, UIStyle.BONE, UIStyle.body())
+		_sub_lbl.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		_sub_lbl.position = Vector2(-520, -150)
+		_sub_lbl.custom_minimum_size = Vector2(1040, 0)
+		_sub_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_sub_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_sub_lbl.add_theme_constant_override("outline_size", 6)
+		_sub_lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+		root.add_child(_sub_lbl)
+	_sub_lbl.text = "%s:  %s" % [who, text]
+	_sub_lbl.add_theme_color_override("font_color", col)
+	_sub_t = secs if secs > 0.0 else 3.0 + text.length() * 0.06
+	_sub_lbl.visible = true
+
+
+func radio_alert(t: String) -> void:
+	banner.text = t
+	banner.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
+	banner_sub.text = "Something is drawing them to the farm."
+	_banner_t = 5.0
+	Sfx.play("scanner", 0.0, 0.5)
 
 
 func fade() -> void:
@@ -308,6 +339,12 @@ func _process(dt: float) -> void:
 	elif p.aiming > 0.8 and Game.has("rangefinder") and p.range_m > 0.0:
 		t = "%d m" % int(p.range_m)
 	info.text = t
+	if _sub_lbl != null:
+		_sub_t -= dt
+		_sub_lbl.visible = _sub_t > 0.0 and radio_box.visible == false
+	var f: Farm = world.farm
+	if f != null and f.raid_on:
+		goal_lbl.text = "RAID ON THE FARM: %d left  ·  wall %d/%d\n%s" % [f.raid_ghouls.size(), int(Game.wall_hp), int(f.max_wall()), world.story_goal()]
 	_hit_t -= dt
 	hit_lbl.visible = _hit_t > 0.0
 	_banner_t -= dt

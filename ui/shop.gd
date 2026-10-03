@@ -1,5 +1,5 @@
 extends UIPanel
-## Mae's Trading Post, over the radio. Her drone takes what you sell and
+## The Xhuul Horn Exchange, over the radio. Their drone takes what you sell and
 ## drops what you buy on the porch.
 
 var tabs: TabContainer
@@ -7,7 +7,7 @@ var money: Label
 
 
 func panel_title() -> String:
-	return "MAE'S TRADING POST"
+	return "XHUUL HORN EXCHANGE"
 
 
 func panel_size() -> Vector2:
@@ -124,7 +124,7 @@ func _sell_tab() -> void:
 				Game.mount(idx)
 				world.structures.refresh_wall()
 				Game.say("Mounted in the farmhouse. Every visitor will ask about it.", Color(0.9, 0.85, 0.6))))
-			_row(v, title, "Trophy horns. Mount them for prestige (rank XP) or sell them to Mae.", "%d" % val, btns, Catalog.class_color(t["class"]))
+			_row(v, title, "Trophy horns. Mount them for prestige (rank XP) or sell them to the Xhuul.", "%d" % val, btns, Catalog.class_color(t["class"]))
 		else:
 			_row(v, "%s hide  ·  %s (%d%%)" % [sp["name"], Catalog.hide_grade(float(t["quality"])), int(t["quality"])], "Every hole costs. Heart and brain shots keep a hide whole; plasma cooks it.", "%d" % val, btns)
 	v.add_child(UIStyle.button("SELL EVERYTHING  (%d scrip)" % total, func() -> void:
@@ -192,7 +192,7 @@ func _gear_tab() -> void:
 
 func _contracts_tab() -> void:
 	var v := _tab("CONTRACTS")
-	v.add_child(UIStyle.label("Mae's buyers want these. Bring the goods to this radio (sell or mount them) and it's paid on the spot. Heart-shot jobs pay the moment the animal drops.", 16, UIStyle.DIM))
+	v.add_child(UIStyle.label("The Exchange's clients want these. Bring the goods to this radio (sell or mount them) and it's paid on the spot. Heart-shot jobs pay the moment the animal drops.", 16, UIStyle.DIM))
 	for c in Game.contracts:
 		_row(v, String(c["text"]), "+%d XP" % int(c["xp"]), "%d" % int(c["pay"]), [])
 	if Game.contracts.is_empty():

@@ -24,7 +24,7 @@ func build() -> void:
 		["Hold E over a carcass to take the hide and the horns. Your pack only holds so much: sell or mount at the trade radio on your porch.", "t"],
 		["Tuskmaws charge. Crownelk charge at night. Howler packs hunt you after dark. The Ironcrown...", "t"],
 		["GETTING BETTER", ""],
-		["Kills, contracts and mounted trophies raise your rank. Rank unlocks Mae's better guns and Visitor gear: heart scanners, thermal optics, a phase cloak, a recon drone, the coil rifle, the plasma lance and the rail gun.", "t"],
+		["Kills, contracts and mounted trophies raise your rank. Rank unlocks the Exchange's better guns and Xhuul gear: heart scanners, thermal optics, a phase cloak, a recon drone, the coil rifle, the plasma lance and the rail gun.", "t"],
 		["Salvage the crashed escape pods around the valley for scrip once a day. Sleep in your bed to save.", "t"],
 	]
 	for l in lines:

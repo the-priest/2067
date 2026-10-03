@@ -305,6 +305,14 @@ func _barn(o: Vector3) -> void:
 		var p := Vector3(o.x - W * 0.3 + (i % 3) * 1.4, o.y + 0.45 + (i / 3) * 0.9, o.z - D * 0.35)
 		solid("wood", p, Vector3(1.3, 0.85, 0.9), Color(0.6, 0.52, 0.3))
 	avoid.append(Vector3(o.x, o.z, 16.0))
+	# The workbench, just inside the big doors.
+	var wb := Vector3(o.x - W * 0.3, o.y, o.z + D * 0.35)
+	solid("wood", wb + Vector3(0, 0.45, 0), Vector3(2.2, 0.08, 0.9), Color(0.4, 0.3, 0.2))
+	for dx: float in [-1.0, 1.0]:
+		solid("wood", wb + Vector3(dx * 1.0, 0.22, 0), Vector3(0.08, 0.44, 0.8), Color(0.35, 0.26, 0.18), Basis.IDENTITY, false)
+	(kits["metal"] as MeshKit).box(wb + Vector3(0.4, 0.6, 0), Vector3(0.5, 0.22, 0.3), Color(0.25, 0.25, 0.28))
+	(kits["lamp"] as MeshKit).box(wb + Vector3(-0.5, 0.52, 0.1), Vector3(0.3, 0.05, 0.2), Color(0.4, 1.0, 0.85))
+	Interactable.make(world, wb + Vector3(0, 0.9, 0), "Workbench: build farm defenses", func(_p: Node) -> void: world.open_workbench(), 3.0)
 
 
 func _silo(o: Vector3) -> void:

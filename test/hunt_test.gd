@@ -51,6 +51,7 @@ func _ready() -> void:
 	await _spotting()
 	await _shop()
 	await _sights()
+	await _farm_defense()
 	_save_load()
 	print("HUNT TEST DONE fails=%d" % fails)
 	get_tree().quit()
@@ -128,7 +129,7 @@ func _harvest_and_sell() -> void:
 	_ok("the horns carry a score and class (%.1f %s)" % [float(horn.get("score", 0.0)), horn.get("class", "")], float(horn.get("score", 0.0)) > 10.0 and horn.get("class", "") != "")
 	var s0 := Game.scrip
 	var got := Game.sell(0)
-	_ok("Mae buys it (+%d)" % got, got > 0 and Game.scrip > s0)
+	_ok("the Exchange buys it (+%d)" % got, got > 0 and Game.scrip > s0)
 	Game.mount(0)
 	_ok("horns go on the wall", Game.wall.size() == 1)
 	world.structures.refresh_wall()
@@ -245,6 +246,53 @@ func _sights() -> void:
 	await _pic("ads_scope")
 	Input.action_release("aim")
 	await _frames(20)
+
+
+func _farm_defense() -> void:
+	print("PHASE farm")
+	_ok("Dale is with you", world.companion != null and world.companion.body != null)
+	_ok("the farm starts with a wall and a turret", world.farm.level("wall") == 1 and world.farm.turrets.size() == 1)
+	# A ghoul in the open: a head shot drops it.
+	var gp := world.player.global_position + Vector3(20, 0, 20)
+	gp.y = world.terrain.height_at(gp.x, gp.z)
+	var g: Ghoul = world.spawn_ghoul("ghoul", gp, false)
+	g.set_physics_process(false)
+	await _frames(2)
+	var head := g.global_position + Vector3(0, g.h * 0.92, 0)
+	var from := head + Vector3(-6, 0.2, 0)
+	world.fire(from, (head - from).normalized(), "bolt", world.player)
+	var b: Dictionary = world.bullets[world.bullets.size() - 1]
+	b["drop"] = 0.0
+	b["vel"] = (head - from).normalized() * 820.0
+	await _frames(10)
+	_ok("a head shot drops a ghoul", g.dead)
+	# A raid: the turrets (and a couple more we build) hold the wall.
+	Game.scrip += 5000
+	_ok("the workbench sells turrets", world.farm.buy("turrets") and world.farm.turrets.size() == 2)
+	_ok("tesla needs Xyla first", world.farm.why_not("tesla") != "")
+	world.player.global_position = world.farm.core() + Vector3(0, 0.5, 0)
+	world.farm.start_raid(4)
+	_ok("a raid spawns ghouls", world.farm.raid_on and world.farm.raid_ghouls.size() == 4)
+	for gh in world.farm.raid_ghouls:
+		var gg := gh as Ghoul
+		var dir := (gg.global_position - world.farm.center).normalized()
+		gg.global_position = world.farm.center + dir * 70.0
+	Engine.time_scale = 4.0
+	for i in 60 * 50:
+		await get_tree().physics_frame
+		if not world.farm.raid_on:
+			break
+	Engine.time_scale = 1.0
+	_ok("the farm holds the raid (wall %d)" % int(Game.wall_hp), not world.farm.raid_on)
+	# Rank 5: Xyla turns up.
+	Game.add_xp(2000)
+	world.set_process(true)
+	for i in 70:
+		await get_tree().process_frame
+	_ok("Xyla joins the farm at rank 5", Game.xyla and world.xyla_npc != null)
+	world.talk_xyla()
+	_ok("and has something to say", Game.xyla_talk == 1)
+	_ok("now the tesla tower can be built", world.farm.why_not("tesla") == "")
 
 
 func _pic(n: String) -> void:

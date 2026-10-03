@@ -20,7 +20,7 @@ func build() -> void:
 	v.add_child(UIStyle.label("CONTRACTS", 22, UIStyle.RUST, UIStyle.title()))
 	for c in Game.contracts:
 		v.add_child(UIStyle.label("%s  ·  %d scrip" % [c["text"], int(c["pay"])], 17))
-	v.add_child(UIStyle.label("MAE SAYS", 22, UIStyle.RUST, UIStyle.title()))
+	v.add_child(UIStyle.label("THE JOB", 22, UIStyle.RUST, UIStyle.title()))
 	v.add_child(UIStyle.label(world.story_goal(), 17, UIStyle.TEAL))
 	v.add_child(UIStyle.label("LOG", 22, UIStyle.RUST, UIStyle.title()))
 	for e in Game.log_entries:

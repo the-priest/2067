@@ -2,7 +2,7 @@ class_name World
 extends Node3D
 ## The hunt. Builds the valley, puts you on your porch, keeps the herds
 ## coming, flies every round, leaves the blood trails, and runs the trader
-## and Mae's radio.
+## and Blorvak's radio, and the ghouls.
 
 signal loaded
 signal progress(t: float, what: String)
@@ -35,6 +35,11 @@ var _night_pack_t := 120.0
 var _salvaged: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 var ready_done := false
+var farm: Farm
+var ghouls: Array = []
+var companion: Companion
+var xyla_npc: Companion = null
+var _wild_ghoul_t := 200.0
 var test_mode := false
 var _story_t := 4.0
 
@@ -78,6 +83,10 @@ func build() -> void:
 	add_child(flora)
 	flora.setup(terrain)
 	flora.place_all(Game.seed_world, structures.avoid)
+	farm = Farm.new()
+	farm.name = "Farm"
+	add_child(farm)
+	farm.setup(self, terrain)
 	progress.emit(0.8, "Waking the herds")
 	await get_tree().process_frame
 	_blood_setup()
@@ -93,6 +102,13 @@ func build() -> void:
 	terrain.build_lod_now(player.global_position)
 	structures.refresh_wall()
 	atmo.apply_quality()
+	companion = Companion.new()
+	companion.name = "Dale"
+	add_child(companion)
+	companion.setup(self, "dale")
+	companion.global_position = player.global_position + Vector3(2, 0, 3)
+	if Game.xyla:
+		_spawn_xyla()
 	for i in 18:
 		_spawn_herd(true)
 	hud = load("res://ui/hud.gd").new()
@@ -100,6 +116,7 @@ func build() -> void:
 	add_child(hud)
 	hud.call("setup", self)
 	Sfx.ambience(true, Game.is_night())
+	get_tree().create_timer(6.0).timeout.connect(func() -> void: companion.say(Story.line("start")))
 	ready_done = true
 	progress.emit(1.0, "")
 	loaded.emit()
@@ -142,6 +159,8 @@ func _process(dt: float) -> void:
 	_night_packs(dt)
 	_story(dt)
 	_discover()
+	_wild_ghouls(dt)
+	_xyla_check()
 	if drone != null:
 		_drone_tick(dt)
 
@@ -349,6 +368,7 @@ func _on_killed(c: Creature, info: Dictionary) -> void:
 		Game.say("THE IRONCROWN IS DOWN", Color(1.0, 0.85, 0.3))
 	if hud != null:
 		hud.call("kill_banner", verdict, c)
+	companion_react("heart" if heart else "kill")
 
 
 # ---------------------------------------------------------------- harvesting
@@ -393,6 +413,7 @@ func harvest(c: Creature) -> void:
 			full = true
 	if not took.is_empty():
 		Sfx.play("harvest", -4.0)
+		companion_react("harvest")
 		for t3 in took:
 			Game.say("Harvested: %s" % t3, Color(0.85, 0.95, 0.7))
 		Game.stat("harvests")
@@ -414,7 +435,8 @@ func fire(origin: Vector3, dir: Vector3, kind: String, shooter: Node) -> void:
 	var t100 := 100.0 / v
 	var lift := 0.5 * 9.81 * drop * t100 * t100 / 100.0
 	var d := (dir + Vector3(0, lift, 0)).normalized()
-	var b := {"origin": origin, "pos": origin, "vel": d * v, "w": w, "kind": kind, "v0": v, "life": 4.0, "drop": drop, "exclude": [shooter.get_rid()], "hits": 0, "trace": null, "dist": 0.0}
+	var aimed: bool = shooter == player and player.aim_creature != null and not player.aim_creature.dead
+	var b := {"aimed": aimed, "origin": origin, "pos": origin, "vel": d * v, "w": w, "kind": kind, "v0": v, "life": 4.0, "drop": drop, "exclude": [shooter.get_rid()], "hits": 0, "trace": null, "dist": 0.0}
 	if kind == "plasma":
 		b["trace"] = _plasma_ball(origin)
 	if kind == "rail":
@@ -443,8 +465,17 @@ func _fly_bullets(dt: float) -> void:
 			var w: Dictionary = b["w"]
 			var energy := vel.length() / float(b["v0"])
 			var dmg := float(w["dmg"]) * (0.55 + 0.45 * energy)
-			if col is Creature:
+			if col is Ghoul:
+				var gr: Dictionary = (col as Ghoul).take_shot(hp, vel.normalized(), w, dmg)
+				Sfx.play_at("impact", hp, 0.0, 60.0)
+				if hud != null:
+					hud.call("hit_marker", gr, float(b["dist"]))
+				done = true
+			elif col is Creature:
 				var res: Dictionary = (col as Creature).take_shot(hp, vel.normalized(), w, dmg)
+				if not bool(res.get("kill", false)) and res.get("organ", "") in ["LUNGS", "GUT", "FLESH", "NECK"]:
+					companion_react("wounded")
+				b["aimed"] = false
 				Sfx.play_at("impact", hp, 0.0, 60.0)
 				Game.stat("hits")
 				if hud != null:
@@ -460,6 +491,8 @@ func _fly_bullets(dt: float) -> void:
 					done = true
 			else:
 				_impact(hp, hit["normal"], b)
+				if bool(b.get("aimed", false)):
+					companion_react("miss")
 				done = true
 			if bool(w.get("burn", false)):
 				_plasma_burst(hp)
@@ -806,7 +839,7 @@ func player_died() -> void:
 	Game.carried.clear()
 	var fee := mini(Game.scrip, 100 + Game.rank() * 25)
 	Game.scrip -= fee
-	Game.say("You wake up on your porch. Mae's people dragged you home. -%d scrip%s" % [fee, (", and the %d trophies you carried are gone" % lost) if lost > 0 else ""], Color(1.0, 0.5, 0.45))
+	Game.say("You wake up on your porch. Dale dragged you home by the boots. -%d scrip%s" % [fee, (", and the %d trophies you carried are gone" % lost) if lost > 0 else ""], Color(1.0, 0.5, 0.45))
 	if hud != null:
 		hud.call("fade")
 	await get_tree().create_timer(1.2).timeout
@@ -821,22 +854,13 @@ func player_died() -> void:
 	Game.changed.emit()
 
 
-# ---------------------------------------------------------------- Mae on the radio
+# ---------------------------------------------------------------- Blorvak on the radio
 
-const STORY := [
-	{"msg": "Mae here, on the trading net. You're Joe's grandkid, out on the old farm? Then listen. The Moorhorns are grazing the fields south of your place. Hides and horns, I buy both. Bring 'em to your radio and my drone'll fetch 'em.", "goal": "Hunt a Moorhorn in the fields and sell it at your trade radio"},
-	{"msg": "That's a good start. Save up for the Ranch .308: Grandpa's lever gun won't reach the ridges. And find their hearts: the Visitors scrambled them, no two in the same place. A clean heart shot keeps the hide whole.", "goal": "Reach rank 2 and buy the Ranch .308"},
-	{"msg": "Stagwraiths in the dead forest, west of you. They hear everything. Crouch, keep the wind in your face, and don't let 'em smell you. Their antlers grow crystal. Buyers love crystal.", "goal": "Take a Stagwraith in the western forest"},
-	{"msg": "You're getting a name. The Tuskmaws in the eastern badlands are worth real money, but they don't run from you. They run AT you. Bring a bigger gun or be somewhere high.", "goal": "Reach rank 4 (Tuskmaws in the east, Ramspires on the north ridges)"},
-	{"msg": "Ramspires up on the northern ridges: that's the horn every hunter wants on the wall. They see you a mile off. Long glass, long shot. And I've got a coil rifle in that came off a wreck: near silent.", "goal": "Mount a Ramspire spiral on your trophy wall"},
-	{"msg": "There's Crownelk in the marsh by the lake. Big as trucks, and at night they don't back off. And folks are talking about something in the crash basin, under the mothership. Something huge, with two hearts.", "goal": "Reach rank 6, then go to the crash basin"},
-	{"msg": "It's real. They call it the Ironcrown. It walks the basin round the mothership, and nobody's brought one in. Find both hearts. And don't stand where it can reach you.", "goal": "Hunt the Ironcrown in the crash basin (north-east)"},
-	{"msg": "You did it. The whole net's talking. There's no hunter in this valley like you. Keep the farm going, kid. There'll always be more of them.", "goal": "Fill the wall. Every species, every class."},
-]
+var STORY: Array = Story.RADIO
 
 
 func story_goal() -> String:
-	return String(STORY[clampi(Game.story - 1, 0, STORY.size() - 1)]["goal"])
+	return String(STORY[clampi(Game.story - 1, 0, STORY.size() - 1)][1])
 
 
 func _story(dt: float) -> void:
@@ -864,11 +888,11 @@ func _story(dt: float) -> void:
 		7:
 			next = Game.legend_down
 	if next and s < STORY.size():
-		var entry: Dictionary = STORY[s]
+		var entry: Array = STORY[s]
 		Game.story = s + 1
 		if hud != null:
-			hud.call("radio", entry["msg"])
-		Game.journal("Mae: " + String(entry["msg"]).substr(0, 80) + "...")
+			hud.call("radio", entry[0])
+		Game.journal("Blorvak: " + String(entry[0]).substr(0, 80) + "...")
 		Sfx.play("scanner", -4.0, 0.8)
 		Game.changed.emit()
 
@@ -921,3 +945,93 @@ func travel_to(at: Vector3) -> void:
 	Game.time_of_day = fmod(Game.time_of_day + 0.5, 24.0)
 	terrain.build_lod_now(at)
 	Sfx.play("step", -6.0)
+
+
+
+# ---------------------------------------------------------------- ghouls
+
+func spawn_ghoul(kind: String, at: Vector3, raid: bool) -> Ghoul:
+	var g := Ghoul.new()
+	add_child(g)
+	g.setup(self, kind, at, raid)
+	ghouls.append(g)
+	g.tree_exiting.connect(func() -> void: ghouls.erase(g))
+	return g
+
+
+func ghoul_died(_g: Ghoul) -> void:
+	pass
+
+
+func companion_react(what: String) -> void:
+	if companion != null:
+		companion.react(what)
+
+
+## Out in the wasteland at night, the odd ghoul (and later the Burnt) finds you.
+func _wild_ghouls(dt: float) -> void:
+	if not Game.is_night() or Game.rank() < 2:
+		return
+	_wild_ghoul_t -= dt
+	if _wild_ghoul_t > 0.0:
+		return
+	_wild_ghoul_t = _rng.randf_range(150.0, 320.0)
+	var pp := player.global_position
+	if pp.distance_to(farm.center) < 120.0:
+		return
+	var n := _rng.randi_range(1, 2 + Game.rank() / 3)
+	var a := _rng.randf() * TAU
+	for i in n:
+		var p := pp + Vector3(cos(a), 0, sin(a)) * 90.0 + Vector3(_rng.randf_range(-8, 8), 0, _rng.randf_range(-8, 8))
+		p.y = terrain.height_at(p.x, p.z)
+		spawn_ghoul("burnt" if Game.rank() >= 5 and _rng.randf() < 0.25 else "ghoul", p, false)
+	companion_react("ghoul")
+
+
+# ---------------------------------------------------------------- Xyla
+
+func _xyla_check() -> void:
+	if Game.xyla or Game.rank() < 5 or Engine.get_process_frames() % 60 != 0:
+		return
+	Game.xyla = true
+	Game.journal("Xyla, a Xhuul appraiser on the run from the Horn Exchange, has moved into the barn.")
+	if hud != null:
+		hud.call("radio", "Xhuul signal, unencrypted: \"Farmer. I am Xyla. I have run from the Horn Exchange and they will come for me. I am at your barn. Please do not shoot. I am very pretty.\"")
+	_spawn_xyla()
+	Game.say("Someone's waiting at your barn.", Color(0.55, 0.95, 1.0))
+
+
+func _spawn_xyla() -> void:
+	if xyla_npc != null:
+		return
+	xyla_npc = Companion.new()
+	xyla_npc.name = "Xyla"
+	add_child(xyla_npc)
+	xyla_npc.setup(self, "xyla")
+	xyla_npc.follow = false
+	var spot := Vector3(Terrain.FARM.x + 22.0, 0, Terrain.FARM.y + 4.0)
+	spot.y = terrain.height_at(spot.x, spot.z)
+	xyla_npc.home = spot
+	xyla_npc.global_position = spot
+	xyla_npc.rotation.y = PI * 0.5
+	var it := Interactable.make(self, spot + Vector3(0, 1.6, 0), "Talk to Xyla", func(_p: Node) -> void: talk_xyla(), 3.0)
+	it.name = "XylaTalk"
+
+
+func talk_xyla() -> void:
+	var i := mini(Game.xyla_talk, Story.XYLA.size() - 1)
+	if hud != null:
+		hud.call("subtitle", "XYLA", Story.XYLA[i], Color(0.55, 0.95, 1.0), 12.0)
+	if Game.xyla_talk < Story.XYLA.size() - 1:
+		Game.xyla_talk += 1
+	if xyla_npc != null:
+		xyla_npc.body.set_anim("wave")
+		get_tree().create_timer(2.5).timeout.connect(func() -> void:
+			if xyla_npc != null:
+				xyla_npc.body.set_anim("idle"))
+
+
+func open_workbench() -> void:
+	var s: Node = load("res://ui/workbench.gd").new()
+	s.call("setup", self)
+	hud.add_child(s)

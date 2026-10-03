@@ -151,7 +151,10 @@ func _build(sd: int) -> void:
 		hk.blob(Vector3(0, hs.y * 1.25, 0.01 * h), Vector3(hs.x * 1.05, hs.y * 0.55, hs.z * 1.05), k["hair"], 8, 10)
 		hk.tag = Vector2(1, 0)
 		for sx: float in [-1.0, 1.0]:
-			hk.blob(Vector3(sx * hs.x * 0.55, hs.y * 0.65, -hs.z * 0.8), Vector3.ONE * 0.003 * h, k["glow"], 3, 4)
+			for j in 3:
+				hk.blob(Vector3(sx * hs.x * (0.5 + j * 0.08), hs.y * (0.72 - j * 0.04), -hs.z * 0.8), Vector3.ONE * 0.0028 * h, k["glow"], 3, 4)
+		hk.tag = Vector2(4, 0)
+		hk.blob(Vector3(0, hs.y * 0.5, -hs.z * 0.93), Vector3(0.016, 0.006, 0.008) * h, Color(0.55, 0.3, 0.6), 5, 6)
 		hk.tag = Vector2.ZERO
 	_mi(hk.commit(), head)
 	# Legs.
@@ -286,8 +289,16 @@ func _process(dt: float) -> void:
 					reach = -0.9 # arms out in front, the way they shamble
 				sh.rotation = Vector3(sw2 + reach - (0.3 if lower else 0.0), 0, side * (0.08 + breathe + (0.4 if lower else 0.0)))
 				el.rotation = Vector3(-0.15 - absf(sw2) * 0.5 - (0.5 if anim == "run" else 0.0), 0, 0)
-		if holds_rifle and anim != "aim" and not lower:
-			pass
+		pass
+	if holds_rifle and spine.has_node("Rifle"):
+		var rf: Node3D = spine.get_node("Rifle")
+		if anim == "aim":
+			rf.position = Vector3(0.05 * h, 0.3 * h, -0.2 * h)
+			rf.rotation = Vector3.ZERO
+		else:
+			# Slung across the back.
+			rf.position = Vector3(0, 0.18 * h, 0.1 * h)
+			rf.basis = Basis(Vector3.FORWARD, 0.7) * Basis(Vector3.RIGHT, PI * 0.5)
 	if anim == "dead":
 		_dead_t = minf(1.0, _dead_t + dt * 2.0)
 		rotation.x = lerpf(0.0, -PI * 0.48, ease(_dead_t, 0.4))

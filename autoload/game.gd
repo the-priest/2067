@@ -31,6 +31,12 @@ var scent_until := 0.0
 var player_pos := Vector3.ZERO
 var has_save := false
 var camps: Dictionary = {} # discovered hunting camps
+var defense: Dictionary = {} # farm defense levels
+var wall_hp := 200.0
+var next_raid_day := 2
+var raids_done := 0
+var xyla := false # has Xyla joined the farm
+var xyla_talk := 0
 
 
 func _ready() -> void:
@@ -43,13 +49,14 @@ func rank() -> int:
 
 
 func capacity() -> int:
+	var c := 2
 	if gear.has("pack4"):
-		return 10
-	if gear.has("pack3"):
-		return 6
-	if gear.has("pack2"):
-		return 4
-	return 2
+		c = 10
+	elif gear.has("pack3"):
+		c = 6
+	elif gear.has("pack2"):
+		c = 4
+	return c + 2 # Dale carries two
 
 
 func has(g: String) -> bool:
@@ -322,8 +329,14 @@ func new_game() -> void:
 	scent_until = 0.0
 	player_pos = Vector3.ZERO
 	camps = {}
+	defense = {}
+	wall_hp = 200.0
+	next_raid_day = 2
+	raids_done = 0
+	xyla = false
+	xyla_talk = 0
 	refresh_contracts()
-	journal("Grandpa's rifle, thirty rounds, and the trader's on the radio. Time to hunt.")
+	journal("Grandpa's rifle, thirty rounds, Dale, and an alien broker on the radio. Time to hunt.")
 
 
 func save_game() -> void:
@@ -332,7 +345,8 @@ func save_game() -> void:
 		"ammo": ammo, "mag": mag, "carried": carried, "wall": wall, "sold_total": sold_total,
 		"contracts": contracts, "stats": stats, "log": log_entries, "day": day,
 		"time": time_of_day, "seed": seed_world, "story": story, "seen": seen_species,
-		"legend_down": legend_down, "camps": camps, "pos": [player_pos.x, player_pos.y, player_pos.z],
+		"legend_down": legend_down, "camps": camps, "defense": defense, "wall_hp": wall_hp,
+		"next_raid": next_raid_day, "raids": raids_done, "xyla": xyla, "xyla_talk": xyla_talk, "pos": [player_pos.x, player_pos.y, player_pos.z],
 	}
 	var f := FileAccess.open(SAVE, FileAccess.WRITE)
 	if f != null:
@@ -368,6 +382,12 @@ func load_game() -> bool:
 	seen_species = s.get("seen", {})
 	legend_down = bool(s.get("legend_down", false))
 	camps = s.get("camps", {})
+	defense = _ints(s.get("defense", {}))
+	wall_hp = float(s.get("wall_hp", 200.0))
+	next_raid_day = int(s.get("next_raid", day + 1))
+	raids_done = int(s.get("raids", 0))
+	xyla = bool(s.get("xyla", false))
+	xyla_talk = int(s.get("xyla_talk", 0))
 	var p: Array = s.get("pos", [0, 0, 0])
 	player_pos = Vector3(float(p[0]), float(p[1]), float(p[2]))
 	if contracts.size() < 3:
