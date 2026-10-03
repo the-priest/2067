@@ -7,6 +7,8 @@ var terrain := FlatGround.new()
 var player: Node3D = null
 var flora = null
 var atmo = null
+var creatures: Array = []
+var herds: Dictionary = {}
 
 
 class FlatGround:

@@ -36,7 +36,7 @@ void fragment() {
 		float p = 0.6 + 0.4 * pow(abs(sin(TIME * pulse_rate * 3.14159)), 6.0);
 		ALBEDO = glow_col * 0.25;
 		ROUGHNESS = 0.2;
-		EMISSION = glow_col * (1.5 + night * 3.0) * p * alive;
+		EMISSION = glow_col * (0.5 + night * 1.6) * p * alive;
 		SSS_STRENGTH = 0.8;
 	} else {
 		vec2 fuv = UV * vec2(1.6, 2.0);

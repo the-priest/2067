@@ -315,6 +315,7 @@ func _process(dt: float) -> void:
 	if Game.has("thermal"):
 		hints.append("%s thermal" % Game.key("thermal"))
 	hints.append("%s light" % Game.key("flash"))
+	hints.append("%s map / fast travel / shop" % Game.key("map"))
 	hint_lbl.text = "  ".join(hints)
 	# Prompt.
 	var it: Object = p.interact_target

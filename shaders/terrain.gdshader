@@ -58,9 +58,9 @@ void fragment() {
 
 	// Grass, dried out: the real green, bleached toward straw and olive.
 	vec3 g = two(tex_grass, uv, 0.22, m3);
-	vec3 dry = desat(g, 0.55) * vec3(1.35, 1.12, 0.62);
-	vec3 grass = mix(dry, g * vec3(0.9, 0.95, 0.75), smoothstep(0.55, 0.85, m2) * 0.45);
-	grass *= 0.85 + m * 0.3;
+	vec3 dry = desat(g, 0.6) * vec3(1.02, 0.94, 0.72);
+	vec3 grass = mix(dry, g * vec3(0.78, 0.84, 0.62), 0.25 + smoothstep(0.55, 0.85, m2) * 0.35);
+	grass *= 0.72 + m * 0.25;
 	// Dirt and ash from the sand: darker, browner, greyer.
 	vec3 sd = two(tex_sand, uv, 0.15, m);
 	vec3 dirt = desat(sd, 0.35) * vec3(0.62, 0.52, 0.42);

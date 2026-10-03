@@ -15,6 +15,7 @@ var render_scale := 1.0
 var vsync := true
 var killcam := true
 var rumble := true
+var dynamic_res := true # drop resolution to hold 60 fps
 var pad_sens := 2.6
 
 
@@ -30,6 +31,7 @@ func _ready() -> void:
 		vsync = bool(cf.get_value("gfx", "vsync", true))
 		killcam = bool(cf.get_value("game", "killcam", true))
 		rumble = bool(cf.get_value("input", "rumble", true))
+		dynamic_res = bool(cf.get_value("gfx", "dynamic_res", true))
 		pad_sens = float(cf.get_value("input", "pad_sens", pad_sens))
 	else:
 		preset = -1
@@ -43,11 +45,12 @@ func auto_preset() -> int:
 	if compat():
 		return 0
 	var name := RenderingServer.get_video_adapter_name().to_lower()
-	if name.contains("intel") or name.contains("llvmpipe") or name.contains("vega") or name.contains("radeon(tm) graphics"):
-		return 0
-	if name.contains("rtx") or name.contains("rx 6") or name.contains("rx 7") or name.contains("rx 9"):
+	if name.contains("rtx 40") or name.contains("rtx 50") or name.contains("rx 7") or name.contains("rx 9"):
 		return 2
-	return 1
+	if name.contains("rtx") or name.contains("gtx 16") or name.contains("rx 6"):
+		return 1
+	# Laptops, integrated graphics and anything we don't recognise start on Low.
+	return 0
 
 
 ## Running on the OpenGL fallback (no Vulkan).
@@ -66,6 +69,7 @@ func save() -> void:
 	cf.set_value("audio", "volume", volume)
 	cf.set_value("game", "killcam", killcam)
 	cf.set_value("input", "rumble", rumble)
+	cf.set_value("gfx", "dynamic_res", dynamic_res)
 	cf.set_value("input", "pad_sens", pad_sens)
 	cf.save(FILE)
 
@@ -74,15 +78,15 @@ func save() -> void:
 func q() -> Dictionary:
 	match preset:
 		0:
-			return {"shadow": 2048, "shadow_dist": 140.0, "ssao": false, "ssil": false, "vfog": false, "sdfgi": false,
-				"grass": 0.35, "grass_r": 45.0, "trees": 0.6, "view": 1100.0, "lod0": 160.0, "lod1": 420.0, "glow": true, "taa": false, "ssr": false, "scale": 0.85}
+			return {"shadow": 2048, "shadow_dist": 90.0, "splits": 2, "ssao": false, "ssil": false, "vfog": false, "sdfgi": false,
+				"grass": 0.3, "grass_r": 40.0, "trees": 0.55, "view": 900.0, "lod0": 130.0, "lod1": 360.0, "glow": true, "taa": false, "ssr": false, "scale": 0.8}
 		1:
-			return {"shadow": 4096, "shadow_dist": 220.0, "ssao": true, "ssil": false, "vfog": true, "sdfgi": false,
-				"grass": 0.7, "grass_r": 70.0, "trees": 0.85, "view": 1600.0, "lod0": 220.0, "lod1": 560.0, "glow": true, "taa": false, "ssr": false, "scale": 1.0}
+			return {"shadow": 2048, "shadow_dist": 140.0, "splits": 2, "ssao": true, "ssil": false, "vfog": false, "sdfgi": false,
+				"grass": 0.6, "grass_r": 60.0, "trees": 0.8, "view": 1400.0, "lod0": 200.0, "lod1": 520.0, "glow": true, "taa": false, "ssr": false, "scale": 1.0}
 		2:
-			return {"shadow": 4096, "shadow_dist": 320.0, "ssao": true, "ssil": true, "vfog": true, "sdfgi": false,
+			return {"shadow": 4096, "shadow_dist": 260.0, "splits": 4, "ssao": true, "ssil": true, "vfog": true, "sdfgi": false,
 				"grass": 1.0, "grass_r": 95.0, "trees": 1.0, "view": 2200.0, "lod0": 300.0, "lod1": 750.0, "glow": true, "taa": true, "ssr": true, "scale": 1.0}
-	return {"shadow": 8192, "shadow_dist": 420.0, "ssao": true, "ssil": true, "vfog": true, "sdfgi": true,
+	return {"shadow": 4096, "shadow_dist": 380.0, "splits": 4, "ssao": true, "ssil": true, "vfog": true, "sdfgi": true,
 		"grass": 1.4, "grass_r": 120.0, "trees": 1.0, "view": 3000.0, "lod0": 380.0, "lod1": 900.0, "glow": true, "taa": true, "ssr": true, "scale": 1.0}
 
 
@@ -90,7 +94,7 @@ func q() -> Dictionary:
 func apply_to(vp: Viewport, env: Environment, sun: DirectionalLight3D) -> void:
 	var d := q()
 	var c := compat()
-	vp.scaling_3d_scale = minf(float(d["scale"]), render_scale) if not c else 1.0
+	vp.scaling_3d_scale = minf(float(d["scale"]), render_scale)
 	if not c and vp.scaling_3d_scale < 0.99:
 		vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR
 	vp.use_taa = bool(d["taa"]) and not c
@@ -99,6 +103,7 @@ func apply_to(vp: Viewport, env: Environment, sun: DirectionalLight3D) -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
 	if sun != null:
 		sun.directional_shadow_max_distance = float(d["shadow_dist"])
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if int(d.get("splits", 4)) == 2 else DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 	if env != null:
 		env.ssao_enabled = bool(d["ssao"]) and not c
 		env.ssil_enabled = bool(d["ssil"]) and not c

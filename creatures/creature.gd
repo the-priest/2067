@@ -68,12 +68,15 @@ var _rng := RandomNumberGenerator.new()
 var _fur: ShaderMaterial = null
 var _fur_on := false
 var _thermal_on := false
+var _furred: Array = [] # the torso and neck: the only parts that get fur
+var _head_cs: CollisionShape3D
+var _head_rot := 0.0
 
 ## How long each species' coat is (m). The elephant and the rhino are bare.
 const FUR := {"moorhorn": 0.028, "stagwraith": 0.016, "tuskmaw": 0.035, "ramspire": 0.045, "crownelk": 0.032,
 	"howler": 0.04, "tigrath": 0.016, "ursagore": 0.055, "mammothar": 0.0, "rhinox": 0.0, "girafflux": 0.01,
 	"leonix": 0.022, "ironcrown": 0.07}
-const SHELLS := 6
+const SHELLS := 4
 static var _shell_cache: Dictionary = {}
 
 
@@ -135,13 +138,14 @@ func _build() -> void:
 	horn_mat.shader = preload("res://shaders/horn.gdshader")
 	horn_mat.set_shader_parameter("glow_col", Horns.glow_of(horn, sp["glow"]))
 	horn_mat.set_shader_parameter("detail", Tex.get_tex("detail"))
-	var vis_end := 1400.0 if legendary else 950.0
+	var vis_end := 1200.0 if legendary else 700.0
 	var torso := _mi(_p["torso"], skin, model, vis_end)
 	torso.name = "Torso"
+	_furred.append(torso)
 	neck = Node3D.new()
 	neck.position = _p["neck_pivot"]
 	model.add_child(neck)
-	_mi(_p["neck"], skin, neck, vis_end)
+	_furred.append(_mi(_p["neck"], skin, neck, vis_end))
 	head = Node3D.new()
 	head.position = _p["head_c"]
 	neck.add_child(head)
@@ -156,16 +160,16 @@ func _build() -> void:
 			var hp0: Vector3 = _p["hip_" + which]
 			hip.position = Vector3(hp0.x * side, hp0.y, hp0.z)
 			model.add_child(hip)
-			_mi(_p["thigh_" + which], skin, hip, 400.0)
+			_mi(_p["thigh_" + which], skin, hip, 260.0).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			var knee := Node3D.new()
 			knee.position = Vector3(0, -float(_p["l1_" + which]), 0)
 			hip.add_child(knee)
-			_mi(_p["shin_" + which], skin, knee, 300.0)
+			_mi(_p["shin_" + which], skin, knee, 200.0).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			hips.append([hip, knee, which == "f", side])
 	tail = Node3D.new()
 	tail.position = _p["tail_pivot"]
 	model.add_child(tail)
-	_mi(_p["tail"], skin, tail, 250.0)
+	_mi(_p["tail"], skin, tail, 150.0).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# Hit shapes: torso, and neck+head.
 	var L := float(_p["L"])
 	var H := float(_p["H"])
@@ -186,6 +190,8 @@ func _build() -> void:
 	cs2.position = (piv + sn * 0.5) * size
 	cs2.rotation.x = atan2(sn.y, -sn.z)
 	add_child(cs2)
+	_head_cs = cs2
+	_head_rot = atan2(sn.y, -sn.z)
 
 
 ## The fur: a chain of shell passes, shared by every animal of a species.
@@ -734,7 +740,8 @@ func _process(dt: float) -> void:
 	var want_fur := _fur != null and cd < 45.0 and not _thermal_on
 	if want_fur != _fur_on:
 		_fur_on = want_fur
-		skin.next_pass = _fur if want_fur else null
+		for mi in _furred:
+			(mi as MeshInstance3D).material_overlay = _fur if want_fur else null
 	if cd > 260.0 and Engine.get_process_frames() % 4 != 0:
 		return
 	var spd := _speed
@@ -778,6 +785,7 @@ func _process(dt: float) -> void:
 	neck.rotation.x = lerpf(neck.rotation.x, -target_pitch, clampf(dt * 3.0, 0.0, 1.0))
 	neck.rotation.y = lerpf(neck.rotation.y, target_yaw, clampf(dt * 3.0, 0.0, 1.0))
 	tail.rotation.z = sin(Time.get_ticks_msec() * 0.003 + herd_id) * 0.3
+	_sync_head_shape()
 	tail.rotation.x = -0.4 if run else 0.0
 	# Lean into the slope.
 	var n: Vector3 = world.terrain.normal_at(global_position.x, global_position.z)
@@ -786,17 +794,40 @@ func _process(dt: float) -> void:
 	model.rotation.z = lerpf(model.rotation.z, atan2(local_n.x, local_n.y) * 0.6, clampf(dt * 4.0, 0.0, 1.0))
 
 
+## The head's hit box follows the head, so a grazing animal can still be
+## shot in the head.
+func _sync_head_shape() -> void:
+	if _head_cs == null:
+		return
+	var sn: Vector3 = _p["snout"]
+	var mid := neck.position + neck.basis * (sn * 0.5)
+	_head_cs.position = model.transform * mid
+	_head_cs.basis = (model.basis.orthonormalized() * neck.basis * Basis(Vector3.RIGHT, _head_rot)).orthonormalized()
+
+
+## Death: the legs fold and it settles onto its belly, head turned and
+## propped up, so the horns stand clear of the ground for the photo.
 func _dead_tick(dt: float) -> void:
 	if _fall < 1.0:
-		_fall = minf(1.0, _fall + dt * 1.6)
-		var e := ease(_fall, 0.4)
-		model.rotation.z = lerpf(0.0, PI * 0.47 * (1.0 if herd_id % 2 == 0 else -1.0), e)
-		model.position.y = -float(_p["W"]) * 0.1 * e * size
-		neck.rotation.x = lerpf(neck.rotation.x, 0.3, e)
+		var first := _fall == 0.0
+		_fall = minf(1.0, _fall + dt * 1.1)
+		var e := ease(_fall, 0.35)
+		var side := 1.0 if herd_id % 2 == 0 else -1.0
+		var drop := float(sp["body"]["leg"]) * size * 0.92
+		model.position.y = lerpf(0.0, -drop, e)
+		model.rotation.z = lerpf(0.0, 0.16 * side, e)
+		model.rotation.x = lerpf(model.rotation.x, 0.04, e)
+		neck.rotation.x = lerpf(neck.rotation.x, -0.12, e)
+		neck.rotation.y = lerpf(neck.rotation.y, 0.55 * side, e)
+		tail.rotation.x = lerpf(tail.rotation.x, -0.2, e)
 		for hp_ in hips:
-			(hp_[0] as Node3D).rotation.x = lerpf((hp_[0] as Node3D).rotation.x, 0.25 if hp_[2] else -0.2, e)
-			(hp_[1] as Node3D).rotation.x = lerpf((hp_[1] as Node3D).rotation.x, 0.0, e)
+			var front: bool = hp_[2]
+			# Front legs tuck back under the chest, hind legs fold forward.
+			(hp_[0] as Node3D).rotation.x = lerpf((hp_[0] as Node3D).rotation.x, -1.35 if front else 1.25, e)
+			(hp_[1] as Node3D).rotation.x = lerpf((hp_[1] as Node3D).rotation.x, 2.5 if front else -2.4, e)
 		global_position.y = world.terrain.height_at(global_position.x, global_position.z)
+		if first:
+			Sfx.play_at(String(sp["call"]), center(), -6.0, 60.0, 0.7)
 		if _fall >= 1.0:
 			Sfx.play_at("thud", center(), 0.0, 40.0)
 

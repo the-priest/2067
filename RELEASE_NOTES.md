@@ -1,7 +1,32 @@
-# 2067: Hornfall 0.4.0 beta
+# 2067: Hornfall 0.5.0 beta
 
 The first playable build of the hunt. Download the zip for your system, unzip, and run
 `2067.exe` (Windows) or `2067.x86_64` (Linux). Saves go in your user folder.
+
+## New in 0.5: faster, more realistic, quieter feet
+
+- **Runs much faster.** Distant trees now use light versions (three levels
+  of detail), shadows only come from things near you, the sky no longer
+  re-renders every frame, and animals are leaner far away. That cuts the
+  triangles drawn in a frame by more than half. On top of that the game now
+  holds 60 FPS by lowering the render resolution a little when it needs to
+  (turn it off in Settings). Laptops start on Low.
+- **Footsteps fixed.** Soft heel thuds and a quiet crunch of dirt and grass,
+  four variations, much quieter. Sorry about the old ones.
+- **Controller works in every menu.** A selects, B goes back, d-pad and
+  stick move.
+- **More realistic look.** Real ground textures (grass, rock, sand) with
+  normal maps, blended so they never tile. Animals have real fur up close.
+  Horns lost the glowing bulbs: they're real keratin now, and on about four
+  in ten animals the wasteland has grown on them: moss, hanging vines,
+  grass and tiny flowers.
+- **Dead animals lie down properly**, folded onto their bellies with the head
+  turned and the horns up, ready for the photo.
+- **Shop and fast travel from anywhere.** The map (M / Back) and the pause
+  menu both open the Horn Exchange (buy guns, ammo and gear, sell trophies)
+  and fast travel. All six camps are on your map from the start, and each
+  camp has its own radio to the Exchange.
+- Fixed: grazing animals can be shot in the head again.
 
 ## New in 0.4: the story, Dale, the ghouls and the farm
 

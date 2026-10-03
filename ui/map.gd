@@ -46,6 +46,9 @@ func build() -> void:
 	if left > 0:
 		side.add_child(UIStyle.label("%d camp%s still to find out there." % [left, "" if left == 1 else "s"], 14, UIStyle.DIM))
 	side.add_child(HSeparator.new())
+	side.add_child(UIStyle.button("HORN EXCHANGE: BUY / SELL", func() -> void:
+		close()
+		world.open_shop(), 320))
 	side.add_child(UIStyle.button("JOURNAL", func() -> void:
 		close()
 		var j: Control = load("res://ui/journal.gd").new()

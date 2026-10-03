@@ -7,7 +7,9 @@ extends Node3D
 ## MultiMesh per kind per patch, so the GPU draws them in batches), with
 ## collision on every trunk. Grass streams around the player.
 
-const PATCH := 256.0
+const PATCH := 128.0
+const NEAR := 120.0 # full-detail trees out to here
+const MID := 380.0 # then the light version out to here, then the lightest
 const GRASS_CELL := 20.0
 
 var terrain: Terrain
@@ -41,15 +43,33 @@ func setup(t: Terrain) -> void:
 
 # ---------------------------------------------------------------- meshes
 
+var _lo := false # building the low-detail, far-away version
+
+
 func _make_kinds() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 77
+	# Trees come in two versions: full detail up close, a few hundred
+	# triangles far away.
+	var r2 := RandomNumberGenerator.new()
 	for i in 4:
-		kinds["oak%d" % i] = _dead_oak(rng)
+		r2.seed = 770 + i
+		kinds["oak%d" % i] = _dead_oak(r2)
+		r2.seed = 770 + i
+		_lo = true
+		kinds["oak%d_far" % i] = _dead_oak(r2)
+		kinds["oak%d_xfar" % i] = _stick_tree(kinds["oak%d" % i])
+		_lo = false
+	for i in 3:
+		r2.seed = 880 + i
+		kinds["alien%d" % i] = _alien_tree(r2)
+		r2.seed = 880 + i
+		_lo = true
+		kinds["alien%d_far" % i] = _alien_tree(r2)
+		kinds["alien%d_xfar" % i] = _stick_tree(kinds["alien%d" % i], true)
+		_lo = false
 	for i in 3:
 		kinds["snag%d" % i] = _snag(rng)
-	for i in 3:
-		kinds["alien%d" % i] = _alien_tree(rng)
 	for i in 3:
 		kinds["bush%d" % i] = _bush(rng)
 	for i in 4:
@@ -72,8 +92,8 @@ func _branch(k: MeshKit, rng: RandomNumberGenerator, start: Vector3, dir: Vector
 		rad.append(r * lerpf(1.0, 0.25, u))
 		d = (d + Vector3(rng.randf_range(-0.35, 0.35), rng.randf_range(-0.1, 0.25), rng.randf_range(-0.35, 0.35))).normalized()
 		p += d * length / segs
-	k.tube(pts, rad, maxi(3, 7 - depth * 2), col, true)
-	if depth >= 3:
+	k.tube(pts, rad, 4 if _lo else maxi(3, 7 - depth * 2), col, true)
+	if depth >= (1 if _lo else 3):
 		return
 	var nb := rng.randi_range(2, 3 if depth == 0 else 3)
 	for b in nb:
@@ -99,7 +119,7 @@ func _dead_oak(rng: RandomNumberGenerator) -> Dictionary:
 		pts.append(p)
 		rad.append(r * (1.0 + 0.8 * pow(1.0 - u, 6.0)) * lerpf(1.0, 0.55, u))
 		p += (lean + Vector3(rng.randf_range(-0.12, 0.12), 0, rng.randf_range(-0.12, 0.12))) * h * 0.6 / 6.0
-	k.tube(pts, rad, 9, col, true)
+	k.tube(pts, rad, 5 if _lo else 9, col, true)
 	var top := pts[6]
 	for b in rng.randi_range(3, 5):
 		var side := Vector3(rng.randf_range(-1, 1), rng.randf_range(0.5, 1.1), rng.randf_range(-1, 1)).normalized()
@@ -107,6 +127,23 @@ func _dead_oak(rng: RandomNumberGenerator) -> Dictionary:
 		_branch(k, rng, from, side, h * rng.randf_range(0.35, 0.55), r * 0.55, 1, col)
 	_branch(k, rng, top, lean, h * 0.4, r * 0.5, 1, col)
 	return {"mesh": k.commit(), "r": r * 1.1, "h": h}
+
+
+## The lightest tree, for the far distance: a trunk and a few limbs.
+func _stick_tree(full: Dictionary, glow: bool = false) -> Dictionary:
+	var k := MeshKit.new()
+	var h := float(full["h"])
+	var r := float(full["r"]) / 1.1
+	var col := Color(0.24, 0.21, 0.19) if not glow else Color(0.12, 0.1, 0.14)
+	k.cyl(Vector3(0, -0.5, 0), Vector3(0, h * 0.6, 0), r, r * 0.5, 4, col, false)
+	for i in 3:
+		var a := TAU * i / 3.0 + 0.4
+		k.cyl(Vector3(0, h * 0.5, 0), Vector3(cos(a) * h * 0.3, h * 0.95, sin(a) * h * 0.3), r * 0.4, r * 0.1, 3, col, false)
+	if glow:
+		k.tag = Vector2(1, 0)
+		k.blob(Vector3(0, h, 0), Vector3(0.6, 0.45, 0.6), Color(0.3, 0.9, 0.85), 4, 6)
+		k.tag = Vector2.ZERO
+	return {"mesh": k.commit(), "r": full["r"], "h": h}
 
 
 func _snag(rng: RandomNumberGenerator) -> Dictionary:
@@ -122,7 +159,7 @@ func _snag(rng: RandomNumberGenerator) -> Dictionary:
 		rad.append(r * lerpf(1.2, 0.12, u))
 	k.tube(pts, rad, 7, col, true)
 	# Stubs of dead branches, angled down.
-	var n := rng.randi_range(10, 18)
+	var n := rng.randi_range(6, 11)
 	for i in n:
 		var y := rng.randf_range(h * 0.3, h * 0.92)
 		var a := rng.randf() * TAU
@@ -150,7 +187,7 @@ func _alien_tree(rng: RandomNumberGenerator) -> Dictionary:
 			rad.append(r * 0.5 * lerpf(1.2, 0.35, u))
 		k.tube(pts, rad, 6, col, true)
 	# Drooping tendrils ending in glowing bulbs.
-	for t in rng.randi_range(5, 8):
+	for t in (3 if _lo else rng.randi_range(5, 8)):
 		var a2 := rng.randf() * TAU
 		var start := Vector3(0, h * rng.randf_range(0.7, 1.0), 0)
 		var pts2 := PackedVector3Array()
@@ -334,11 +371,46 @@ func place_all(sd: int, avoid: Array) -> void:
 			mmi.multimesh = mm
 			mmi.material_override = mat
 			var small: bool = kind.begins_with("bush") or kind.begins_with("reed") or kind == "rock2"
-			mmi.visibility_range_end = (260.0 if small else view)
-			mmi.visibility_range_end_margin = 30.0
+			var has_far := kinds.has(kind + "_far")
+			mmi.visibility_range_end = 260.0 if small else (NEAR if has_far else view)
+			mmi.visibility_range_end_margin = 25.0
 			mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if small else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+			# Only things close by cast shadows: the sun's shadow map doesn't reach far anyway.
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if small or kind.begins_with("rock") or kind.begins_with("crystal") else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 			add_child(mmi)
+			if has_far:
+				var fm := MultiMesh.new()
+				fm.transform_format = MultiMesh.TRANSFORM_3D
+				fm.mesh = kinds[kind + "_far"]["mesh"]
+				fm.instance_count = list.size()
+				for i in list.size():
+					fm.set_instance_transform(i, list[i])
+				var far := MultiMeshInstance3D.new()
+				far.multimesh = fm
+				far.material_override = mat
+				far.visibility_range_begin = NEAR - 10.0
+				far.visibility_range_begin_margin = 25.0
+				far.visibility_range_end = MID
+				far.visibility_range_end_margin = 40.0
+				far.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+				far.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				add_child(far)
+				var xm := MultiMesh.new()
+				xm.transform_format = MultiMesh.TRANSFORM_3D
+				xm.mesh = kinds[kind + "_xfar"]["mesh"]
+				xm.instance_count = list.size()
+				for i in list.size():
+					xm.set_instance_transform(i, list[i])
+				var xfar := MultiMeshInstance3D.new()
+				xfar.multimesh = xm
+				xfar.material_override = mat
+				xfar.visibility_range_begin = MID - 15.0
+				xfar.visibility_range_begin_margin = 40.0
+				xfar.visibility_range_end = view
+				xfar.visibility_range_end_margin = 60.0
+				xfar.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+				xfar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				add_child(xfar)
 	print("FLORA %d placed in %d ms" % [tree_count, Time.get_ticks_msec() - t0])
 
 
@@ -439,7 +511,7 @@ func _grass_cell(k: Vector2i) -> Node3D:
 			continue
 		var b := terrain.biome_at(x, z)
 		var kind := "grass"
-		var col := Color(0.46, 0.43, 0.27).lerp(Color(0.58, 0.52, 0.33), rng.randf()).lerp(Color(0.36, 0.4, 0.22), rng.randf() * 0.5)
+		var col := Color(0.4, 0.38, 0.25).lerp(Color(0.5, 0.46, 0.3), rng.randf()).lerp(Color(0.3, 0.36, 0.2), rng.randf() * 0.6)
 		if b.r > 0.45:
 			if rng.randf() > 0.5:
 				continue

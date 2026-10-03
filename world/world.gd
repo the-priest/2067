@@ -40,6 +40,8 @@ var ghouls: Array = []
 var companion: Companion
 var xyla_npc: Companion = null
 var _wild_ghoul_t := 200.0
+var _fps_t := 0.0
+var _fps_low := 0.0
 var test_mode := false
 var _story_t := 4.0
 
@@ -109,7 +111,7 @@ func build() -> void:
 	companion.global_position = player.global_position + Vector3(2, 0, 3)
 	if Game.xyla:
 		_spawn_xyla()
-	for i in 18:
+	for i in 13:
 		_spawn_herd(true)
 	hud = load("res://ui/hud.gd").new()
 	hud.name = "HUD"
@@ -161,6 +163,7 @@ func _process(dt: float) -> void:
 	_discover()
 	_wild_ghouls(dt)
 	_xyla_check()
+	_dynamic_resolution(dt)
 	if drone != null:
 		_drone_tick(dt)
 
@@ -244,7 +247,7 @@ func _spawn_herd(initial: bool = false) -> bool:
 func spawn_herd(kind: String, at: Vector3, count: int = -1) -> Array:
 	var sp: Dictionary = Catalog.SPECIES[kind]
 	var hr: Array = sp["herd"]
-	var n := count if count > 0 else _rng.randi_range(int(hr[0]), int(hr[1]) + 2)
+	var n := count if count > 0 else _rng.randi_range(int(hr[0]), int(hr[1]) + 1)
 	var id := _next_herd
 	_next_herd += 1
 	var list: Array = []
@@ -284,7 +287,7 @@ func _manage_herds() -> void:
 	var alive := 0
 	for id in herds.keys():
 		alive += 1
-	if alive < 18:
+	if alive < 13:
 		_spawn_herd()
 	_legend()
 
@@ -944,7 +947,7 @@ func travel_to(at: Vector3) -> void:
 	player.velocity = Vector3.ZERO
 	Game.time_of_day = fmod(Game.time_of_day + 0.5, 24.0)
 	terrain.build_lod_now(at)
-	Sfx.play("step", -6.0)
+	Sfx.play("step0", -14.0)
 
 
 
@@ -1035,3 +1038,29 @@ func open_workbench() -> void:
 	var s: Node = load("res://ui/workbench.gd").new()
 	s.call("setup", self)
 	hud.add_child(s)
+
+
+
+## Hold 60: if the frame rate sags, render the 3D a little smaller (FSR
+## upscales it back), and give it back when there's headroom.
+func _dynamic_resolution(dt: float) -> void:
+	if not Settings.dynamic_res or test_mode:
+		return
+	_fps_t += dt
+	if _fps_t < 1.5:
+		return
+	_fps_t = 0.0
+	var fps := Engine.get_frames_per_second()
+	var vp := get_viewport()
+	var cap := minf(float(Settings.q()["scale"]), Settings.render_scale)
+	if fps < 55.0:
+		_fps_low += 1.0
+		if _fps_low >= 2.0 and vp.scaling_3d_scale > 0.5:
+			vp.scaling_3d_scale = maxf(0.5, vp.scaling_3d_scale - 0.08)
+			if not Settings.compat():
+				vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR
+			_fps_low = 0.0
+	else:
+		_fps_low = 0.0
+		if fps > 70.0 and vp.scaling_3d_scale < cap:
+			vp.scaling_3d_scale = minf(cap, vp.scaling_3d_scale + 0.04)

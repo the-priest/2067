@@ -43,6 +43,13 @@ func build() -> void:
 		Settings.invert_y = b
 		Settings.save())
 	box.add_child(inv)
+	var dr := CheckBox.new()
+	dr.text = "Hold 60 FPS (lower resolution automatically when needed)"
+	dr.button_pressed = Settings.dynamic_res
+	dr.toggled.connect(func(b: bool) -> void:
+		Settings.dynamic_res = b
+		Settings.save())
+	box.add_child(dr)
 	var kc := CheckBox.new()
 	kc.text = "Bullet cam on long vital shots"
 	kc.button_pressed = Settings.killcam

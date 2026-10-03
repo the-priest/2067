@@ -329,6 +329,8 @@ func new_game() -> void:
 	scent_until = 0.0
 	player_pos = Vector3.ZERO
 	camps = {}
+	for c in Structures.CAMPS:
+		camps[c[0]] = true # all the camps are on your map from the start
 	defense = {}
 	wall_hp = 200.0
 	next_raid_day = 2

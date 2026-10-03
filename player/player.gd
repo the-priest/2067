@@ -240,7 +240,8 @@ func _physics_process(dt: float) -> void:
 		var stride := 0.75 if crouched else (1.45 if _sprinting else 1.0)
 		if _step > stride:
 			_step = 0.0
-			Sfx.play("step_soft" if crouched else "step", (-20.0 if crouched else -11.0) + (3.0 if _sprinting else 0.0), randf_range(0.85, 1.15))
+			var v := randi() % 4
+			Sfx.play(("soft%d" if crouched else "step%d") % v, (-26.0 if crouched else -19.0) + (3.0 if _sprinting else 0.0), randf_range(0.92, 1.08))
 	Game.player_pos = global_position
 
 

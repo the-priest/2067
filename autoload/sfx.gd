@@ -112,8 +112,11 @@ func _make_all() -> void:
 	bank["bolt"] = _bolt()
 	bank["lever"] = _lever()
 	bank["load"] = _click(0.05, 1400.0)
-	bank["step"] = _step(0.09, 0.12)
-	bank["step_soft"] = _step(0.07, 0.06)
+	for i in 4:
+		bank["step%d" % i] = _footstep(i, 1.0)
+		bank["soft%d" % i] = _footstep(i + 10, 0.55)
+	bank["step"] = bank["step0"]
+	bank["step_soft"] = bank["soft0"]
 	bank["impact"] = _impact()
 	bank["heart"] = _heartbeat()
 	bank["wind"] = _windloop()
@@ -257,6 +260,44 @@ func _lever() -> AudioStreamWAV:
 			if tc >= 0.0:
 				s += (sin(TAU * 1300.0 * tc) * 0.5 + randf_range(-1, 1) * 0.5) * exp(-tc * 70.0)
 		b[i] = s
+	return _wav(b)
+
+
+## A boot on dry ground: a soft heel thud, then a quiet crunch of grit and
+## dead grass. Kept well below full scale: it plays every step.
+func _footstep(variant: int, weight: float) -> AudioStreamWAV:
+	seed(1000 + variant)
+	var sec := 0.22
+	var b := _buf(sec)
+	var hp := 0.0
+	var lp := 0.0
+	var lp2 := 0.0
+	var prev := 0.0
+	var roll := 0.03 + randf() * 0.03 # heel to toe
+	for i in b.size():
+		var t := float(i) / RATE
+		# Heel: a low, rounded thump.
+		var thump := sin(TAU * (60.0 + randf() * 0.0 + variant % 4 * 6.0) * t) * exp(-t * 55.0) * minf(1.0, t * 900.0)
+		# Crunch: band-limited noise in little grains, heel then toe.
+		var n := randf_range(-1.0, 1.0)
+		lp += (n - lp) * 0.12
+		hp = lp - lp2
+		lp2 += (lp - lp2) * 0.04
+		var grain := 1.0 if randf() < 0.18 else 0.25
+		var env := exp(-t * 28.0) * minf(1.0, t * 300.0) + exp(-maxf(0.0, t - roll) * 32.0) * 0.6 * float(t > roll)
+		var crunch := hp * grain * env
+		# Soften: one more gentle low-pass over the whole thing.
+		var v := thump * 0.55 * weight + crunch * 0.9
+		prev += (v - prev) * 0.3
+		b[i] = prev
+	# Normalise to a quiet peak, not full scale.
+	var peak := 0.001
+	for v2 in b:
+		peak = maxf(peak, absf(v2))
+	var g := 0.38 / peak
+	for i in b.size():
+		b[i] *= g
+	seed(Time.get_ticks_usec())
 	return _wav(b)
 
 

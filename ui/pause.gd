@@ -7,12 +7,18 @@ func panel_title() -> String:
 
 
 func panel_size() -> Vector2:
-	return Vector2(520, 460)
+	return Vector2(560, 600)
 
 
 func build() -> void:
 	get_tree().paused = false
 	box.add_child(UIStyle.button("RESUME", close))
+	box.add_child(UIStyle.button("MAP AND FAST TRAVEL", func() -> void:
+		close()
+		world.open_travel()))
+	box.add_child(UIStyle.button("HORN EXCHANGE: BUY GUNS, SELL HORNS", func() -> void:
+		close()
+		world.open_shop()))
 	box.add_child(UIStyle.button("SAVE GAME", func() -> void:
 		Game.player_pos = world.player.global_position
 		Game.save_game()

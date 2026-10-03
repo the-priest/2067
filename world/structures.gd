@@ -204,7 +204,7 @@ func _house(o: Vector3) -> void:
 	lt.light_color = Color(1.0, 0.75, 0.45)
 	lt.light_energy = 2.2
 	lt.omni_range = 9.0
-	lt.shadow_enabled = true
+	lt.shadow_enabled = Settings.preset >= 2
 	add_child(lt)
 	lt.global_position = ip + Vector3(2.5, 1.2, 0.5)
 	(kits["lamp"] as MeshKit).blob(ip + Vector3(2.5, 0.95, 0.5), Vector3(0.12, 0.16, 0.12), Color(1.0, 0.8, 0.5), 6, 8)
@@ -649,3 +649,8 @@ func _camps() -> void:
 		k.quad(o + Vector3(-2.5, 4.4, -2.0), o + Vector3(-1.5, 4.2, -2.0), o + Vector3(-1.5, 3.7, -2.0), o + Vector3(-2.5, 3.8, -2.0), Color(0.7, 0.25, 0.1), true)
 		var nm: String = c[0]
 		Interactable.make(world, fp + Vector3(0, 0.6, 0), "Rest at %s: fast travel" % nm, func(_p: Node) -> void: world.open_travel(), 3.0)
+		# Every camp has a radio to the Exchange.
+		var rp := o + Vector3(1.2, 0, 2.0)
+		(kits["metal"] as MeshKit).box(rp + Vector3(0, 0.25, 0), Vector3(0.5, 0.5, 0.3), Color(0.2, 0.22, 0.2))
+		(kits["lamp"] as MeshKit).box(rp + Vector3(0, 0.35, 0.16), Vector3(0.2, 0.08, 0.01), Color(0.4, 1.0, 0.5))
+		Interactable.make(world, rp + Vector3(0, 0.5, 0), "Camp radio: Horn Exchange (buy, sell)", func(_p: Node) -> void: world.open_shop(), 2.5)

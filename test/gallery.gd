@@ -35,6 +35,12 @@ func _ready() -> void:
 		c.set_physics_process(false)
 		c.set_process(false)
 		c.rotation.y = 0.0
+		if OS.get_environment("KILL") != "":
+			c.set_physics_process(true)
+			c.world = fake
+			c._die("HEART")
+			for i in 90:
+				await get_tree().physics_frame
 		var L := float(c.sp["body"]["len"]) * c.size
 		var H := (float(c.sp["body"]["leg"]) + float(c.sp["body"]["h"])) * c.size
 		var hz := float(c.sp["horn_len"]) * 1.2

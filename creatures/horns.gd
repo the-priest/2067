@@ -40,7 +40,7 @@ static func roll(species: String, rng: RandomNumberGenerator, body_size: float) 
 		"sym": rng.randf_range(0.9, 1.0),
 		"col": c1.lerp(c2, rng.randf_range(0.0, 0.4)).to_html(false),
 		"hue": rng.randf_range(-0.09, 0.09),
-		"beads": rng.randf() < 0.45,
+		"moss": rng.randf() < 0.4, # the wasteland grows on them
 		"pairs": 2 if rng.randf() < 0.12 and kind in ["sweep", "spiral", "antler", "palmate", "ossicone"] else 1,
 	}
 	var base := float(sp["horn_len"]) * 100.0
@@ -132,30 +132,65 @@ static func _ridges(rings: float, depth: float) -> Callable:
 		return 1.0 + sin(float(i) * rings) * depth
 
 
-## Glowing beads ringing a horn every few segments: the alien in it.
-static func _beads(k: MeshKit, pts: PackedVector3Array, rad: PackedFloat32Array, glow: Color, h: Dictionary) -> void:
-	if not bool(h.get("beads", false)):
+## Thirty years in the wasteland: on some animals the horns have grown a
+## coat of their own. Moss along the top, vines hanging down with leaves on
+## them, a tuft of grass, a few tiny flowers.
+static func _beads(k: MeshKit, pts: PackedVector3Array, rad: PackedFloat32Array, _glow: Color, h: Dictionary) -> void:
+	if not bool(h.get("moss", false)) or pts.size() < 4:
 		return
-	k.tag = TIP_GLOW
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(h.get("seed", 1)) + pts.size()
 	var n := pts.size()
-	for i in range(2, n - 2, 3):
-		var t := (pts[i + 1] - pts[i - 1]).normalized()
+	k.tag = Vector2(2, 0)
+	var moss := [Color(0.2, 0.3, 0.11), Color(0.28, 0.36, 0.14), Color(0.33, 0.33, 0.16)]
+	for i in rng.randi_range(8, 14):
+		var j := clampi(int(rng.randf_range(0.12, 0.72) * n), 1, n - 2)
+		var t := (pts[j + 1] - pts[j - 1]).normalized()
 		var side := t.cross(Vector3.UP)
 		if side.length() < 0.1:
 			side = Vector3.RIGHT
 		side = side.normalized()
 		var up := side.cross(t).normalized()
-		for j in 4:
-			var a := TAU * j / 4.0 + i * 0.7
-			var p := pts[i] + (side * cos(a) + up * sin(a)) * rad[i] * 1.02
-			k.blob(p, Vector3.ONE * rad[i] * 0.28, glow, 4, 5)
+		if up.y < 0.0:
+			up = -up
+		var a := rng.randf_range(-0.9, 0.9)
+		var at := pts[j] + (up * cos(a) + side * sin(a)) * rad[j] * 0.92
+		var r := rad[j] * rng.randf_range(0.5, 0.95)
+		k.blob(at, Vector3(r, r * 0.35, r * 1.3), moss[rng.randi() % moss.size()].lerp(Color(0.25, 0.22, 0.12), rng.randf() * 0.3), 4, 6, 0.4, i, Basis.looking_at(t, up))
+	# Vines hanging off the underside.
+	for v in rng.randi_range(1, 3):
+		var j2 := clampi(int(rng.randf_range(0.25, 0.75) * n), 1, n - 2)
+		var start := pts[j2] + Vector3(0, -rad[j2] * 0.8, 0)
+		var length := rng.randf_range(0.15, 0.45) * (1.0 + rad[j2] * 4.0)
+		var vp := PackedVector3Array()
+		var vr := PackedFloat32Array()
+		var drift := Vector3(rng.randf_range(-0.05, 0.05), 0, rng.randf_range(-0.05, 0.05))
+		for q in 6:
+			var u := float(q) / 5.0
+			vp.append(start + Vector3(0, -length * u, 0) + drift * u * u)
+			vr.append(0.006 * (1.0 - u * 0.6))
+		k.tube(vp, vr, 4, Color(0.16, 0.24, 0.1), true)
+		for q in 4:
+			var lp := vp[1 + q]
+			var lf := Vector3(rng.randf_range(-1, 1), 0.2, rng.randf_range(-1, 1)).normalized() * 0.03
+			var lc := Color(0.22, 0.34, 0.12).lerp(Color(0.32, 0.36, 0.14), rng.randf())
+			k.quad(lp, lp + lf + Vector3(0, -0.012, 0), lp + lf * 1.6 + Vector3(0, 0.01, 0), lp + lf * 0.6 + Vector3(0, 0.02, 0), lc, true)
+	# A tuft of grass at the base, and maybe flowers.
+	var jb := clampi(int(n * 0.18), 1, n - 2)
+	var tb := pts[jb] + Vector3(0, rad[jb] * 0.85, 0)
+	for g in rng.randi_range(4, 9):
+		var d := Vector3(rng.randf_range(-0.35, 0.35), 1.0, rng.randf_range(-0.35, 0.35)).normalized()
+		k.cyl(tb, tb + d * rng.randf_range(0.05, 0.12), 0.004, 0.0008, 3, Color(0.35, 0.42, 0.18), false)
+	if rng.randf() < 0.6:
+		var fc := [Color(0.95, 0.9, 0.7), Color(0.95, 0.8, 0.25), Color(0.6, 0.45, 0.85)][rng.randi() % 3] as Color
+		for f in rng.randi_range(2, 4):
+			var fp := tb + Vector3(rng.randf_range(-0.04, 0.04), rng.randf_range(0.05, 0.1), rng.randf_range(-0.04, 0.04))
+			k.blob(fp, Vector3(0.012, 0.006, 0.012), fc, 3, 5)
 	k.tag = Vector2.ZERO
 
 
-static func _tip(k: MeshKit, at: Vector3, r: float, glow: Color) -> void:
-	k.tag = TIP_GLOW
-	k.blob(at, Vector3(r, r * 1.5, r), glow, 6, 8)
-	k.tag = Vector2.ZERO
+static func _tip(_k: MeshKit, _at: Vector3, _r: float, _glow: Color) -> void:
+	pass # real horns end in a point, not a light bulb
 
 
 ## Sweeping horns. Style 0: a longhorn's wide sweep with upturned tips.
@@ -327,7 +362,7 @@ static func _crown(k: MeshKit, rng: RandomNumberGenerator, s: float, head: float
 		rad.append(0.24 * s * pow(1.0 - u, 0.65) + 0.01)
 	k.tube(pts, rad, 14, _cols(n, col), true, Vector3.UP, PackedFloat32Array(), _ridges(5.0, 0.06))
 	var hb := h.duplicate()
-	hb["beads"] = true
+	hb["moss"] = true # the Ironcrown is old enough to have a garden
 	_beads(k, pts, rad, glow, hb)
 	for c in 5:
 		var b := Vector3(head * (0.04 + c * 0.07), head * 0.48, head * (0.12 - c * 0.09))
@@ -400,8 +435,8 @@ static func _nose(k: MeshKit, rng: RandomNumberGenerator, s: float, head: float,
 			pts.append(b + Vector3(0, L * u, L * 0.35 * u * u * float(h.get("curl", 1.0))))
 			rad.append(0.16 * s * f * pow(1.0 - u, 0.8) + 0.004)
 		k.tube(pts, rad, 10, _cols(n, col), true, Vector3.FORWARD, PackedFloat32Array(), _ridges(float(h.get("ridges", 5.0)), 0.03))
-		if i == 2:
-			_beads(k, pts, rad, glow, {"beads": true})
+		if i == 0:
+			_beads(k, pts, rad, glow, h)
 		_tip(k, pts[n - 1], 0.02 * s * f + 0.01, glow)
 
 
@@ -410,13 +445,12 @@ static func _ossicone(k: MeshKit, rng: RandomNumberGenerator, s: float, head: fl
 	var b := Vector3(head * 0.14, head * 0.35, head * 0.12)
 	var top := b + Vector3(0.05, 0.3, 0.06) * s
 	k.tube(PackedVector3Array([b, b.lerp(top, 0.5), top]), PackedFloat32Array([0.05 * s, 0.04 * s, 0.045 * s]), 8, _cols(3, col), true)
-	k.tag = TIP_GLOW
 	for i in int(h.get("tines", 5)):
 		var a := TAU * i / float(h.get("tines", 5)) + float(h.get("twist", 0.0))
 		var d := Vector3(cos(a) * 0.5, 1.0, sin(a) * 0.5).normalized()
 		var l := (0.12 + rng.randf() * 0.18) * s
-		k.tube(PackedVector3Array([top, top + d * l]), PackedFloat32Array([0.018 * s, 0.002]), 5, glow, true)
-	k.tag = Vector2.ZERO
+		k.tube(PackedVector3Array([top, top + d * l * 0.6, top + d * l]), PackedFloat32Array([0.02 * s, 0.012 * s, 0.002]), 6, _cols(3, col), true)
+	_beads(k, PackedVector3Array([b, b.lerp(top, 0.3), b.lerp(top, 0.6), top]), PackedFloat32Array([0.05 * s, 0.045 * s, 0.04 * s, 0.045 * s]), glow, h)
 
 
 ## Leonix: crystal quills fanned through the mane, longest at the crown.

@@ -20,10 +20,15 @@ vec3 film(float t) {
 }
 
 void fragment() {
-	if (part > 0.5) {
-		ALBEDO = glow_col * 0.3;
-		EMISSION = glow_col * (2.0 + night * 3.0) * max(alive, mounted * 0.6 + 0.25);
-		ROUGHNESS = 0.1;
+	if (part > 1.5) {
+		// Moss, vines, grass and flowers growing on the horn.
+		ALBEDO = COLOR.rgb;
+		ROUGHNESS = 0.95;
+		SPECULAR = 0.2;
+		BACKLIGHT = COLOR.rgb * 0.4;
+	} else if (part > 0.5) {
+		ALBEDO = COLOR.rgb;
+		ROUGHNESS = 0.5;
 	} else {
 		float u = COLOR.a;
 		vec3 base = COLOR.rgb;
@@ -32,12 +37,11 @@ void fragment() {
 		vec3 col = mix(base * 0.6, mix(base, vec3(0.88, 0.84, 0.74), 0.55), smoothstep(0.1, 0.9, u)) * rings;
 		float f = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.5);
 		vec3 irid = film(f * 1.5 + u * 0.8 + n * 0.3);
-		col = mix(col, col * irid * 1.6, smoothstep(0.35, 1.0, u) * (0.35 + f * 0.5));
+		col = mix(col, col * irid * 1.4, smoothstep(0.5, 1.0, u) * (0.08 + f * 0.25));
 		ALBEDO = col;
 		ROUGHNESS = mix(0.65, 0.22, u);
 		SPECULAR = 0.6;
 		CLEARCOAT = 0.5 * u;
 		CLEARCOAT_ROUGHNESS = 0.2;
-		EMISSION = glow_col * smoothstep(0.85, 1.0, u) * 0.6 * (0.3 + night) * max(alive, mounted * 0.5);
 	}
 }
