@@ -107,7 +107,7 @@ func _build_ui() -> void:
 	ui.add_child(v)
 	v.add_child(UIStyle.label("2067", 120, Color(0.96, 0.87, 0.68), UIStyle.title()))
 	v.add_child(UIStyle.label("H O R N F A L L", 30, UIStyle.RUST, UIStyle.title()))
-	var tag := UIStyle.label("They fell from the sky. They bred with the herds.\nYou farm what's left, and you hunt what they made.", 22, UIStyle.BONE, UIStyle.body())
+	var tag := UIStyle.label("2031: they came in peace. 2034: we found out what they did to the cows.\n2067: you farm the wasteland, hunt what they made, and sell them the horns.", 22, UIStyle.BONE, UIStyle.body())
 	v.add_child(tag)
 	var sp := Control.new()
 	sp.custom_minimum_size = Vector2(0, 24)
@@ -115,6 +115,9 @@ func _build_ui() -> void:
 	if Game.has_save:
 		v.add_child(UIStyle.button("CONTINUE THE HUNT", _continue, 340))
 	v.add_child(UIStyle.button("NEW HUNT", _new, 340))
+	v.add_child(UIStyle.button("WATCH THE INTRO", func() -> void:
+		IntroScene.then_scene = "res://ui/main_menu.tscn"
+		get_tree().change_scene_to_file("res://ui/intro.tscn"), 340))
 	v.add_child(UIStyle.button("SETTINGS", func() -> void: _sub("res://ui/settings_panel.gd"), 340))
 	v.add_child(UIStyle.button("FIELD GUIDE", func() -> void: _sub("res://ui/help.gd"), 340))
 	v.add_child(UIStyle.button("QUIT", func() -> void: get_tree().quit(), 340))
@@ -142,4 +145,5 @@ func _continue() -> void:
 func _new() -> void:
 	Game.new_game()
 	Game.save_game()
-	get_tree().change_scene_to_file("res://ui/game.tscn")
+	IntroScene.then_scene = "res://ui/game.tscn"
+	get_tree().change_scene_to_file("res://ui/intro.tscn")
