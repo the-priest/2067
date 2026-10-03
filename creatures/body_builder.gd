@@ -91,9 +91,21 @@ static func parts(species: String) -> Dictionary:
 			up = -0.1
 		"moorhorn":
 			up = 0.35
+		"tigrath":
+			up = 0.12
+		"leonix":
+			up = 0.25
+		"ursagore":
+			up = 0.2
+		"mammothar":
+			up = 0.05
+		"rhinox":
+			up = -0.05
+		"girafflux":
+			up = 3.2
 	var ndir := Vector3(0, up, -1.0).normalized()
 	var neck_end := ndir * nk
-	var head_dir := Vector3(0, -0.55, -1.0).normalized() if species not in ["tuskmaw", "howler", "ironcrown"] else Vector3(0, -0.25, -1.0).normalized()
+	var head_dir := Vector3(0, -0.55, -1.0).normalized() if species not in ["tuskmaw", "howler", "ironcrown", "tigrath", "leonix", "ursagore", "rhinox"] else Vector3(0, -0.25, -1.0).normalized()
 	var snout := neck_end + head_dir * hd
 	var segs := 12
 	for i in segs:
@@ -130,8 +142,25 @@ static func parts(species: String) -> Dictionary:
 		k2.blob(e, Vector3.ONE * hd * 0.06, Color.BLACK, 5, 7)
 		k2.blob(e + Vector3(0, hd * 0.1, 0) - head_dir * hd * 0.06, Vector3.ONE * hd * 0.035, Color.BLACK, 4, 6)
 	k2.tag = Vector2.ZERO
+	var cat := bool(sp.get("cat", false))
+	# Elephant: sail ears and a trunk that glows at the tip.
+	if bool(sp.get("trunk", false)):
+		for sgn: float in [-1.0, 1.0]:
+			k2.blob(head_c + side * sgn * hd * 0.42 - head_dir * hd * 0.15 + Vector3(0, -hd * 0.05, 0), Vector3(hd * 0.06, hd * 0.55, hd * 0.5), fur.darkened(0.08), 8, 12, 0.12, 7)
+		var dn := Vector3(0, -1, 0)
+		var tpts := PackedVector3Array([snout - head_dir * hd * 0.1, snout + dn * hd * 0.45 + head_dir * hd * 0.08, snout + dn * hd * 0.95 + head_dir * hd * 0.05, snout + dn * hd * 1.35 + head_dir * hd * 0.2, snout + dn * hd * 1.5 + head_dir * hd * 0.38])
+		k2.tube(tpts, PackedFloat32Array([hd * 0.17, hd * 0.13, hd * 0.1, hd * 0.075, hd * 0.06]), 10, fur, true, Vector3.FORWARD, PackedFloat32Array(), func(i: int, _a: float) -> float: return 1.0 + 0.05 * sin(float(i) * 9.0))
+		k2.tag = Vector2(1, 0)
+		k2.blob(tpts[4], Vector3.ONE * hd * 0.06, glow, 5, 6)
+		k2.tag = Vector2.ZERO
+	# The lion's mane.
+	if bool(sp.get("mane", false)):
+		k2.blob(head_c - head_dir * hd * 0.32 + Vector3(0, -hd * 0.05, 0), Vector3(hd * 0.72, hd * 0.82, hd * 0.6), fur.darkened(0.35), 10, 14, 0.4, 11)
 	# Ears.
-	if species != "ironcrown":
+	if species == "ursagore" or cat:
+		for sgn: float in [-1.0, 1.0]:
+			k2.blob(head_c + side * sgn * hd * 0.26 + Vector3(0, hd * 0.26, 0) - head_dir * hd * 0.12, Vector3(hd * 0.1, hd * 0.11, hd * 0.05), fur, 6, 8)
+	elif species not in ["ironcrown", "mammothar", "rhinox"]:
 		for sgn: float in [-1.0, 1.0]:
 			var eb := head_c + side * sgn * hd * 0.22 + Vector3(0, hd * 0.2, 0) - head_dir * hd * 0.15
 			var el := hd * (0.55 if species == "stagwraith" else 0.3)
@@ -160,6 +189,8 @@ static func parts(species: String) -> Dictionary:
 		var l1 := hy * 0.5
 		var l2 := hy * 0.5
 		var tr := W * (0.17 if which == "f" else 0.23)
+		if species in ["mammothar", "rhinox"]:
+			tr = W * 0.21
 		var kt := MeshKit.new()
 		# Thigh: from inside the body down to the knee.
 		var bend := 0.05 if which == "f" else -0.1
@@ -169,7 +200,7 @@ static func parts(species: String) -> Dictionary:
 		out["thigh_" + which] = kt.commit()
 		out["l1_" + which] = l1
 		var ks := MeshKit.new()
-		var sr := tr * 0.4
+		var sr := tr * (0.4 if species not in ["mammothar", "rhinox", "ursagore"] else 0.72)
 		var hoof_y := -l2 + 0.03
 		ks.tube(PackedVector3Array([Vector3(0, 0.02, 0), Vector3(0, -l2 * 0.3, -bend * l2 * 0.3), Vector3(0, -l2 * 0.7, -bend * l2 * 0.4), Vector3(0, hoof_y + 0.12, 0), Vector3(0, hoof_y + 0.07, -0.01)]),
 			PackedFloat32Array([sr * 1.05, sr * 0.72, sr * 0.6, sr * 0.75, sr * 0.62]), 10, fur, true)
@@ -185,15 +216,21 @@ static func parts(species: String) -> Dictionary:
 
 	# --- tail
 	var kt2 := MeshKit.new()
-	var tl2 := L * (0.45 if species in ["moorhorn", "ironcrown", "howler"] else 0.18)
+	var cat2 := bool(sp.get("cat", false))
+	var tl2 := L * (0.45 if species in ["moorhorn", "ironcrown", "howler", "mammothar"] else (0.6 if cat2 else (0.08 if species == "ursagore" else 0.18)))
 	var tpts := PackedVector3Array()
 	var tr2 := PackedFloat32Array()
 	for i in 6:
 		var u := float(i) / 5.0
-		tpts.append(Vector3(0, -u * tl2 * (0.9 if species != "howler" else 0.55) + (u * (1.0 - u) * tl2 * 0.5 if species == "howler" else 0.0), u * tl2 * (0.25 if species != "howler" else 0.75)))
-		tr2.append(lerpf(W * 0.07, W * 0.025, u) * (2.2 * sin(PI * clampf(u * 0.9 + 0.1, 0.0, 1.0)) + 0.4 if species == "howler" else 1.0))
+		if cat2:
+			# A cat's tail: down, then curling up at the end.
+			tpts.append(Vector3(0, -u * tl2 * 0.7 + u * u * u * tl2 * 0.55, u * tl2 * 0.7))
+			tr2.append(lerpf(W * 0.06, W * 0.04, u))
+		else:
+			tpts.append(Vector3(0, -u * tl2 * (0.9 if species != "howler" else 0.55) + (u * (1.0 - u) * tl2 * 0.5 if species == "howler" else 0.0), u * tl2 * (0.25 if species != "howler" else 0.75)))
+			tr2.append(lerpf(W * 0.07, W * 0.025, u) * (2.2 * sin(PI * clampf(u * 0.9 + 0.1, 0.0, 1.0)) + 0.4 if species == "howler" else 1.0))
 	kt2.tube(tpts, tr2, 6, fur, true)
-	if species in ["moorhorn", "ironcrown"]:
+	if species in ["moorhorn", "ironcrown", "leonix"]:
 		kt2.blob(tpts[5], Vector3(W * 0.06, W * 0.12, W * 0.06), fur.darkened(0.4), 5, 6, 0.3, 3)
 	out["tail"] = kt2.commit()
 	out["tail_pivot"] = Vector3(0, cy + H * 0.3, L * 0.5)

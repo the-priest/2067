@@ -114,8 +114,12 @@ func _build() -> void:
 	skin.set_shader_parameter("fur_n", Tex.get_tex("fur_n"))
 	skin.set_shader_parameter("glow_col", sp["glow"])
 	skin.set_shader_parameter("belly_col", sp["belly"])
-	skin.set_shader_parameter("pattern", ["ridge", "spots", "stripes", "saddle", "bristle"].find(sp["pattern"]))
+	skin.set_shader_parameter("pattern", ["ridge", "spots", "stripes", "saddle", "bristle", "patches"].find(sp["pattern"]))
 	skin.set_shader_parameter("pulse_rate", 0.9 + _rng.randf() * 0.6)
+	skin.set_shader_parameter("mark_k", 1.0 if species in ["tigrath"] else 0.6)
+	if species == "tigrath":
+		skin.set_shader_parameter("mark_dark", 0.08)
+		skin.set_shader_parameter("stripe_f", 26.0)
 	horn_mat = ShaderMaterial.new()
 	horn_mat.shader = preload("res://shaders/horn.gdshader")
 	horn_mat.set_shader_parameter("glow_col", Horns.glow_of(horn, sp["glow"]))
@@ -606,11 +610,12 @@ func _brain(dt: float, pd: float) -> void:
 			var run := float(sp["run"])
 			_speed = move_toward(_speed, run * (0.8 if pd > 30.0 else 1.0), dt * 8.0)
 			if pd < 2.2 + size * float(_p["L"]) * 0.4 and _charge_cool <= 0.0:
-				_charge_cool = 2.5 if species != "howler" else 1.4
-				var dmg := {"tuskmaw": 28.0, "crownelk": 45.0, "ironcrown": 70.0, "howler": 16.0}.get(species, 20.0) as float
+				var biter := species == "howler" or bool(sp.get("cat", false))
+				_charge_cool = 2.5 if not biter else 1.4
+				var dmg := {"tuskmaw": 28.0, "crownelk": 45.0, "ironcrown": 70.0, "howler": 16.0, "tigrath": 34.0, "leonix": 30.0, "ursagore": 45.0, "rhinox": 55.0, "mammothar": 65.0}.get(species, 20.0) as float
 				world.player.call("hurt", dmg * size, global_position)
 				Sfx.play_at("thud", world.player.global_position, 2.0, 30.0)
-				if species != "howler":
+				if not biter:
 					# Run through, then come round again.
 					state = S.FLEE
 					_flee_from = pp

@@ -41,7 +41,7 @@ static func roll(species: String, rng: RandomNumberGenerator, body_size: float) 
 		"col": c1.lerp(c2, rng.randf_range(0.0, 0.4)).to_html(false),
 		"hue": rng.randf_range(-0.09, 0.09),
 		"beads": rng.randf() < 0.45,
-		"pairs": 2 if rng.randf() < 0.12 and kind not in ["fang", "tusk", "crown"] else 1,
+		"pairs": 2 if rng.randf() < 0.12 and kind in ["sweep", "spiral", "antler", "palmate", "ossicone"] else 1,
 	}
 	var base := float(sp["horn_len"]) * 100.0
 	var bonus := 0.0
@@ -95,6 +95,17 @@ static func build(h: Dictionary, head: float, glow: Color, base_col: Color = Col
 					_crown(one, rng, ps * asym, head, glow, base_col, h)
 				"fang":
 					_fang(one, rng, size, head, glow, base_col)
+				"sabre":
+					_sabre(one, rng, ps * asym, head, glow, base_col, h)
+				"ivory":
+					_ivory(one, rng, ps * asym, head, glow, base_col, h)
+				"nose":
+					if side > 0.0:
+						_nose(one, rng, ps, head, glow, base_col, h)
+				"ossicone":
+					_ossicone(one, rng, ps * asym, head, glow, base_col, h)
+				"mane":
+					_mane(one, rng, ps * asym, head, glow, base_col, h)
 			var xf := off
 			if side < 0.0:
 				xf = Transform3D(Basis.from_scale(Vector3(-1, 1, 1)), Vector3.ZERO) * off
@@ -331,3 +342,91 @@ static func _fang(k: MeshKit, rng: RandomNumberGenerator, s: float, head: float,
 	var L := 0.16 * s
 	var pts := PackedVector3Array([b, b + Vector3(0, -L * 0.5, -L * 0.1), b + Vector3(0, -L, 0.03)])
 	k.tube(pts, PackedFloat32Array([0.018 * s, 0.012 * s, 0.002]), 6, _cols(3, Color(0.92, 0.9, 0.84)), true)
+
+
+
+## Tigrath: sabre fangs down past the jaw, and horns swept straight back.
+static func _sabre(k: MeshKit, rng: RandomNumberGenerator, s: float, head: float, glow: Color, col: Color, h: Dictionary) -> void:
+	var fb := Vector3(head * 0.12, -head * 0.1, -head * 0.55)
+	var fl := 0.32 * s
+	k.tube(PackedVector3Array([fb, fb + Vector3(0, -fl * 0.5, -fl * 0.08), fb + Vector3(0.01, -fl, 0.04)]), PackedFloat32Array([0.028 * s, 0.02 * s, 0.002]), 8, _cols(3, Color(0.93, 0.9, 0.82)), true)
+	var base := Vector3(head * 0.24, head * 0.38, head * 0.02)
+	var pts := PackedVector3Array()
+	var rad := PackedFloat32Array()
+	var n := 16
+	var L := 0.9 * s * float(h["spread"])
+	var rise := float(h.get("rise", 0.0))
+	for i in n:
+		var u := float(i) / (n - 1)
+		pts.append(base + Vector3(L * 0.22 * u, L * (0.25 + rise * 0.2) * sin(u * PI * 0.6), L * u))
+		rad.append(0.06 * s * pow(1.0 - u, 0.7) + 0.004)
+	k.tube(pts, rad, 10, _cols(n, col), true, Vector3.UP, PackedFloat32Array(), _ridges(float(h.get("ridges", 6.0)), 0.04))
+	_beads(k, pts, rad, glow, h)
+	_tip(k, pts[n - 1], 0.02 * s, glow)
+
+
+## Mammothar: great tusks out of the upper jaw, sweeping forward, up and in.
+static func _ivory(k: MeshKit, rng: RandomNumberGenerator, s: float, head: float, glow: Color, col: Color, h: Dictionary) -> void:
+	var base := Vector3(head * 0.2, -head * 0.25, -head * 0.42)
+	var pts := PackedVector3Array()
+	var rad := PackedFloat32Array()
+	var n := 20
+	var L := 1.8 * s * float(h["spread"])
+	var curl := float(h.get("curl", 1.0))
+	for i in n:
+		var u := float(i) / (n - 1)
+		var th := u * PI * 0.55 * curl
+		pts.append(base + Vector3(L * 0.12 * sin(u * PI) - L * 0.12 * u * u, -L * 0.25 * sin(th) + L * 0.45 * u * u, -L * 0.75 * sin(u * PI * 0.5)))
+		rad.append(0.1 * s * pow(1.0 - u, 0.5) + 0.006)
+	var ivory := Color(0.9, 0.86, 0.74).lerp(col, 0.15)
+	k.tube(pts, rad, 12, _cols(n, ivory), true, Vector3.UP, PackedFloat32Array(), _ridges(3.0, 0.015))
+	_beads(k, pts, rad, glow, h)
+	_tip(k, pts[n - 1], 0.025 * s, glow)
+
+
+## Rhinox: a great curved horn on the nose, a second behind it, and a third,
+## the Visitors' addition, that glows.
+static func _nose(k: MeshKit, rng: RandomNumberGenerator, s: float, head: float, glow: Color, col: Color, h: Dictionary) -> void:
+	var specs := [[Vector3(0, head * 0.05, -head * 0.62), 1.0], [Vector3(0, head * 0.18, -head * 0.3), 0.55], [Vector3(0, head * 0.3, -head * 0.02), 0.35]]
+	for i in specs.size():
+		var b: Vector3 = specs[i][0]
+		var f: float = specs[i][1]
+		var L := 1.0 * s * f * float(h["spread"])
+		var pts := PackedVector3Array()
+		var rad := PackedFloat32Array()
+		var n := 12
+		for j in n:
+			var u := float(j) / (n - 1)
+			pts.append(b + Vector3(0, L * u, L * 0.35 * u * u * float(h.get("curl", 1.0))))
+			rad.append(0.16 * s * f * pow(1.0 - u, 0.8) + 0.004)
+		k.tube(pts, rad, 10, _cols(n, col), true, Vector3.FORWARD, PackedFloat32Array(), _ridges(float(h.get("ridges", 5.0)), 0.03))
+		if i == 2:
+			_beads(k, pts, rad, glow, {"beads": true})
+		_tip(k, pts[n - 1], 0.02 * s * f + 0.01, glow)
+
+
+## Girafflux: two stubby ossicones, each sprouting a crown of crystal.
+static func _ossicone(k: MeshKit, rng: RandomNumberGenerator, s: float, head: float, glow: Color, col: Color, h: Dictionary) -> void:
+	var b := Vector3(head * 0.14, head * 0.35, head * 0.12)
+	var top := b + Vector3(0.05, 0.3, 0.06) * s
+	k.tube(PackedVector3Array([b, b.lerp(top, 0.5), top]), PackedFloat32Array([0.05 * s, 0.04 * s, 0.045 * s]), 8, _cols(3, col), true)
+	k.tag = TIP_GLOW
+	for i in int(h.get("tines", 5)):
+		var a := TAU * i / float(h.get("tines", 5)) + float(h.get("twist", 0.0))
+		var d := Vector3(cos(a) * 0.5, 1.0, sin(a) * 0.5).normalized()
+		var l := (0.12 + rng.randf() * 0.18) * s
+		k.tube(PackedVector3Array([top, top + d * l]), PackedFloat32Array([0.018 * s, 0.002]), 5, glow, true)
+	k.tag = Vector2.ZERO
+
+
+## Leonix: crystal quills fanned through the mane, longest at the crown.
+static func _mane(k: MeshKit, rng: RandomNumberGenerator, s: float, head: float, glow: Color, col: Color, h: Dictionary) -> void:
+	var n := 5 + int(h.get("tines", 5)) / 2
+	var c := Vector3(0, 0, head * 0.3)
+	for i in n:
+		var a := lerpf(0.15, PI * 0.5, float(i) / float(n - 1))
+		var d := Vector3(cos(a) * 1.0, sin(a) * 1.1, 0.45).normalized()
+		var l := (0.32 + 0.25 * sin(a)) * s * float(h["spread"])
+		var b := c + d * head * 0.55
+		k.tube(PackedVector3Array([b, b + d * l * 0.6 + Vector3(0, 0, 0.04), b + d * l]), PackedFloat32Array([0.022 * s, 0.014 * s, 0.002]), 6, _cols(3, col), true)
+		_tip(k, b + d * l, 0.012 * s, glow)

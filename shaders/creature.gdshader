@@ -14,6 +14,9 @@ uniform float alive = 1.0;
 uniform float pulse_rate = 1.2;
 uniform float thermal = 0.0;
 uniform float wet = 0.0; // blood on the hide
+uniform float mark_k = 0.8;
+uniform float mark_dark = 0.4;
+uniform float stripe_f = 9.0;
 
 varying float part;
 varying vec3 lnrm;
@@ -59,14 +62,27 @@ void fragment() {
 			float r = fract(sin(dot(floor(g), vec2(12.9, 78.2))) * 43758.5);
 			mark = (1.0 - smoothstep(0.12, 0.2, length(c))) * step(0.4, r) * (1.0 - belly);
 		} else if (pattern == 2) { // stripes
-			mark = smoothstep(0.6, 0.85, sin(along * 9.0 + sin(around * 6.28 + along * 3.0) * 1.2 + f.g * 2.0)) * (1.0 - belly) * 0.7;
+			mark = smoothstep(0.55, 0.8, sin(along * stripe_f + sin(around * 6.28 + along * 3.0) * 1.2 + f.g * 2.0)) * (1.0 - belly * 0.7);
 		} else if (pattern == 3) { // saddle
 			mark = smoothstep(0.25, 0.15, abs(around - 0.0)) + smoothstep(0.75, 0.85, around);
 			mark *= smoothstep(0.1, 0.3, along) * smoothstep(1.4, 0.9, along);
+		} else if (pattern == 5) { // patches: a giraffe's net of light lines between dark plates
+			vec2 g = vec2(along * 4.0, around * 7.0) + f.rg * 0.4;
+			vec2 cell = floor(g);
+			vec2 fr = fract(g);
+			float md = 1.0;
+			for (int y = -1; y <= 1; y++) {
+				for (int x = -1; x <= 1; x++) {
+					vec2 o = vec2(float(x), float(y));
+					vec2 pnt = o + 0.5 + 0.35 * sin(6.28 * fract(sin(dot(cell + o, vec2(127.1, 311.7))) * 43758.5) + vec2(0.0, 1.6));
+					md = min(md, length(pnt - fr));
+				}
+			}
+			mark = (1.0 - smoothstep(0.26, 0.4, md)) * (1.0 - belly);
 		} else { // bristle
 			mark = back * 0.8 + f.g * 0.3;
 		}
-		col = mix(col, col * 0.45, clamp(mark, 0.0, 1.0) * 0.8);
+		col = mix(col, col * mark_dark, clamp(mark, 0.0, 1.0) * mark_k);
 		col *= 0.7 + f.r * 0.55;
 		// Faint alien markings that glow along the flanks.
 		float vein = 1.0 - smoothstep(0.0, 0.03, abs(fract(along * 2.5 + sin(around * 12.0) * 0.08) - 0.5));

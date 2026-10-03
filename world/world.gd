@@ -179,10 +179,13 @@ func _pick_species(hab: String) -> String:
 		var sp: Dictionary = Catalog.SPECIES[k]
 		if bool(sp.get("legendary", false)) or k == "howler":
 			continue
-		if sp["habitat"] != hab:
+		var habs: Variant = sp["habitat"]
+		if habs is Array and not (habs as Array).has(hab) or habs is String and habs != hab:
 			continue
+		# Big game shows up as you rank: now and then early, often later.
 		var tier := int(sp["tier"])
-		var w := 1.0 if tier <= 1 + r / 2 else 0.25
+		var allowed := 1 + r / 2
+		var w := 1.0 if tier <= allowed else (0.3 if tier == allowed + 1 else 0.06)
 		opts.append([k, w])
 	if opts.is_empty():
 		return ""

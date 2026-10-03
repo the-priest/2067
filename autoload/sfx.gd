@@ -132,6 +132,8 @@ func _make_all() -> void:
 	bank["drone"] = _droneloop()
 	bank["thud"] = _impact(0.25, 50.0)
 	bank["scanner"] = _beep()
+	bank["roar"] = _roar()
+	bank["trumpet"] = _trumpet()
 
 
 func _wav(buf: PackedFloat32Array, loop: bool = false) -> AudioStreamWAV:
@@ -451,4 +453,37 @@ func _beep() -> AudioStreamWAV:
 	for i in b.size():
 		var t := float(i) / RATE
 		b[i] = sin(TAU * 1900.0 * t) * minf(1.0, (0.12 - t) * 60.0) * 0.5
+	return _wav(b)
+
+
+
+## A big cat's roar (or a bear's, pitched down): growling noise through a
+## sweeping formant, with something metallic in it.
+func _roar() -> AudioStreamWAV:
+	var b := _buf(1.8)
+	var lp := 0.0
+	var ph := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var u := t / 1.8
+		lp += (randf_range(-1.0, 1.0) - lp) * 0.25
+		var f := 90.0 + 70.0 * sin(PI * minf(1.0, u * 1.4))
+		ph += TAU * f / RATE
+		var growl := lp * (0.6 + 0.4 * sin(TAU * 28.0 * t))
+		var env := sin(PI * minf(1.0, u * 1.1)) * minf(1.0, t * 12.0)
+		b[i] = (growl * 2.2 + sin(ph) * 0.7 + sin(ph * 2.01) * 0.3 + sin(ph * 3.7) * 0.15 * u) * env
+	return _wav(b)
+
+
+func _trumpet() -> AudioStreamWAV:
+	var b := _buf(2.2)
+	var ph := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var u := t / 2.2
+		var f := 260.0 + 340.0 * smoothstep(0.0, 0.25, u) - 80.0 * smoothstep(0.6, 1.0, u) + 6.0 * sin(TAU * 6.0 * t)
+		ph += TAU * f / RATE
+		var saw := fmod(ph / TAU, 1.0) * 2.0 - 1.0
+		var env := minf(1.0, t * 10.0) * (1.0 - smoothstep(0.75, 1.0, u))
+		b[i] = (saw * 0.6 + sin(ph * 2.0) * 0.25 + randf_range(-1.0, 1.0) * 0.12) * env
 	return _wav(b)
