@@ -1,7 +1,35 @@
-# 2067: Hornfall 0.3.0 beta
+# 2067: Hornfall 0.4.0 beta
 
 The first playable build of the hunt. Download the zip for your system, unzip, and run
 `2067.exe` (Windows) or `2067.x86_64` (Linux). Saves go in your user folder.
+
+## New in 0.4: the story, Dale, the ghouls and the farm
+
+- **The intro.** A full cinematic, 2031 to 2067: eleven thousand ships over
+  Las Vegas, the press conference, the terms of service nobody read, what
+  they did to the cows, Operation Freedom Moo, the nukes going off with
+  people and aliens running from them, the wasteland, and you. Watch it again
+  from the main menu.
+- **The Xhuul Horn Exchange.** Commissioner Blorvak Nine-Mouths buys your
+  horns and hides over the radio, sets the jobs, and is definitely not
+  hiding anything.
+- **Dale**, your hunting buddy, comes with you. He spots animals and tells
+  you where ("Moorhorn, two hundred metres, off to your left"), marks them,
+  roasts your misses, cheers your heart shots, shoots ghouls, and carries two
+  extra trophies.
+- **Ghouls and the Burnt.** Irradiated humans, and four-armed Xhuul soldiers
+  the bombs left behind. Head shots do triple. They wander the wasteland at
+  night and raid your farm.
+- **Farm defense.** The farm starts with a wall, a turret and floodlights.
+  Raids come every few nights at first with one or two ghouls, then more as
+  you rank up, build up the farm and mount more horns (they sing to them).
+  The workbench in the barn sells wall upgrades, up to six turrets, more
+  lights, a spike trench, and later Tesla towers and a shield dome. It all
+  fights whether you're home or not.
+- **Xyla.** At rank 5 a Xhuul appraiser on the run from the Exchange turns
+  up at your barn. Talk to her: she has things to say about the horns, the
+  ghouls, Blorvak, sunsets and Dale's chili, and she makes the workbench 20%
+  cheaper and unlocks the alien defenses.
 
 ## New in 0.3
 

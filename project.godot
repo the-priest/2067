@@ -8,7 +8,7 @@ config_version=5
 
 config/name="2067"
 config/description="You farm what's left after the Fall. The Visitors crashed, bred with the herds, and now hybrids roam the valley. Hunt them for their hides and their magnificent horns."
-config/version="0.3.0-beta"
+config/version="0.4.0-beta"
 run/main_scene="res://ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/bg_color=Color(0.05, 0.04, 0.035, 1)

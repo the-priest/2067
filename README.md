@@ -1,22 +1,40 @@
 # 2067: HORNFALL
 
-A post-apocalyptic hunting game. Twenty years ago the Visitors' fleet fell
-out of the sky over the valley. They didn't die. They bred with the herds.
-You're a farmer on what's left of your grandfather's homestead, and the only
-thing worth money anymore is what walks out of the ash: alien-animal hybrids
-with hides worth trading and horns worth hanging on a wall.
+In 2031 the Xhuul arrived over Las Vegas promising cures, cold fusion and free
+Wi-Fi forever. Clause 9,112 of their terms of service let them "get to know"
+Earth's wildlife. They got to know ALL of it. By 2034 a Nebraska farmer had
+live-streamed it, Congress declared war in eleven minutes (Operation Freedom
+Moo), and three years later the nukes flew. The Xhuul had shields. Earth
+didn't.
+
+It's 2067. The Xhuul won and kept the planet as a nature reserve for the
+hybrids they made. You've got your grandpa's farm, your grandpa's rifle, and
+Dale. Hunt the mutated hybrids, sell their magnificent horns to the aliens
+who ended the world, and use the money to keep the ghouls off your farm,
+because something keeps drawing them to you.
 
 Built in **Godot 4.7** with the **Forward+** renderer (real-time GI on Ultra,
 volumetric fog, SSAO/SSIL, soft shadows). Low/Medium/High/Ultra presets, FSR
 render scaling, and an automatic OpenGL fallback so it runs on laptops and
-integrated graphics.
+integrated graphics. Full controller support.
 
 ## The hunt
 
-- **Seven hybrids**, every one grown procedurally from its species and its
+- **Thirteen hybrids**, every one grown procedurally from its species and its
   own seed: Moorhorn (cattle), Stagwraith (deer), Tuskmaw (boar), Ramspire
-  (bighorn), Crownelk (moose), Howler packs (wolves that hunt you at night),
-  and the legendary two-hearted **Ironcrown** of the crash basin.
+  (bighorn), Crownelk (moose), Tigrath (tiger), Ursagore (bear with ram
+  horns), Mammothar (elephant), Rhinox (three-horned rhino), Girafflux
+  (giraffe with a crystal crown), Leonix (lion with a crystal-quill mane),
+  Howler packs (wolves that hunt you at night), and the legendary
+  two-hearted **Ironcrown** of the crash basin.
+- **Dale**, your hunting buddy, follows you, spots game and calls it out,
+  roasts your missed shots, shoots ghouls and carries two trophies.
+- **Farm defense**: a wall, turrets, floodlights, spikes, and (once **Xyla**,
+  a Xhuul exile, joins you at rank 5) Tesla towers and a shield dome. Ghoul
+  raids come every few nights and grow with your rank, your farm and the
+  horns on your wall.
+- **The intro**: 2031 to 2067 as a cinematic, from the ships over Vegas to
+  the bombs.
 - **Every heart is somewhere different.** No two animals keep it in the same
   spot. Put a round through it and the animal runs a few seconds and drops: a
   clean kill and a whole hide. Lungs, gut, spine and brain all behave
@@ -42,10 +60,16 @@ integrated graphics.
 
 ## Controls
 
-WASD move · Shift sprint · Ctrl crouch · Space jump · RMB aim · LMB fire ·
-R reload · Shift (scoped) hold breath · wheel zoom · B binoculars · 1-6 guns ·
-E use / hold to harvest · F flashlight · Q caller · V scent mask · C cloak ·
-G drone · T thermal · M map · J journal · F1 field guide · Esc pause
+Keyboard: WASD move · Shift sprint · Ctrl crouch · Space jump · RMB aim ·
+LMB fire · R reload · Shift (scoped) hold breath · wheel zoom · B binoculars ·
+1-6 or X guns · E use / hold to harvest · F flashlight · Q caller · V scent ·
+C cloak · G drone · T thermal · M map (fast travel) · J journal · F1 guide ·
+Esc pause
+
+Controller: left stick move · right stick look · LT aim · RT fire · LB hold
+breath · RB next gun · A jump · B crouch · X use / hold to harvest · Y reload ·
+D-pad: binoculars, light, caller, scent (up/down zoom while scoped) · R3
+thermal · LB+B cloak · LB+A drone · L3 sprint · Back map · Start pause
 
 ## Running
 
