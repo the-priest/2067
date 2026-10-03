@@ -57,15 +57,21 @@ func play_at(n: String, pos: Vector3, db: float = 0.0, range_m: float = 80.0, pi
 	if cam != null:
 		delay = cam.global_position.distance_to(pos) / 343.0
 	if delay > 0.05:
-		get_tree().create_timer(delay).timeout.connect(func() -> void:
-			if is_instance_valid(ap):
-				ap.play())
+		var t := Timer.new()
+		t.one_shot = true
+		t.wait_time = delay
+		t.autostart = true
+		t.timeout.connect(ap.play)
+		ap.add_child(t)
 	else:
 		ap.play()
 	ap.finished.connect(ap.queue_free)
-	get_tree().create_timer(delay + 8.0).timeout.connect(func() -> void:
-		if is_instance_valid(ap):
-			ap.queue_free())
+	var kill := Timer.new()
+	kill.one_shot = true
+	kill.wait_time = delay + 8.0
+	kill.autostart = true
+	kill.timeout.connect(ap.queue_free)
+	ap.add_child(kill)
 
 
 func ambience(on: bool, night: bool = false) -> void:

@@ -34,12 +34,13 @@ static func parts(species: String) -> Dictionary:
 	var pts := PackedVector3Array()
 	var rx := PackedFloat32Array()
 	var ryk := PackedFloat32Array()
-	var n := 14
+	var n := 22
 	var heavy_front := species in ["crownelk", "ironcrown", "moorhorn"]
 	for i in n:
 		var u := float(i) / (n - 1)
-		var z := L * 0.5 - u * L
-		var prof := pow(sin(PI * (0.04 + 0.92 * u)), 0.42)
+		var z := L * 0.56 - u * L * 1.12
+		# Rounded at both ends like a real barrel of a body, full in the middle.
+		var prof := maxf(0.06, pow(maxf(0.0, 1.0 - pow(absf(2.0 * u - 1.0), 2.4)), 0.5))
 		var hump := 0.0
 		if heavy_front:
 			hump = smoothstep(0.45, 0.8, u) * smoothstep(1.0, 0.8, u) * H * (0.35 if species == "ironcrown" else 0.15)
@@ -54,7 +55,13 @@ static func parts(species: String) -> Dictionary:
 		var belly := maxf(0.0, -cos(a)) * sin(u2 * PI) * 0.12
 		var shoulder := maxf(0.0, cos(a)) * smoothstep(0.65, 0.85, u2) * smoothstep(1.0, 0.85, u2) * 0.06
 		return 1.0 + belly + shoulder
-	k.tube(pts, rx, 16, fur, true, Vector3.UP, ryk, sag)
+	k.tube(pts, rx, 20, fur, true, Vector3.UP, ryk, sag)
+	# Haunches and shoulders: the muscle the legs hang from.
+	for sd: float in [-1.0, 1.0]:
+		k.blob(Vector3(sd * W * 0.24, cy - H * 0.02, L * 0.3), Vector3(W * 0.3, H * 0.44, L * 0.2), fur, 10, 14)
+		k.blob(Vector3(sd * W * 0.22, cy - H * 0.05, -L * 0.33), Vector3(W * 0.27, H * 0.42, L * 0.16), fur, 10, 14)
+	# Brisket: the deep chest between the front legs.
+	k.blob(Vector3(0, cy - H * 0.18, -L * 0.4), Vector3(W * 0.32, H * 0.38, L * 0.17), fur, 10, 14)
 	# Glowing nodes down the spine.
 	k.tag = Vector2(1, 0)
 	var nodes := 7 if species != "howler" else 5
@@ -156,15 +163,16 @@ static func parts(species: String) -> Dictionary:
 		var kt := MeshKit.new()
 		# Thigh: from inside the body down to the knee.
 		var bend := 0.05 if which == "f" else -0.1
-		kt.tube(PackedVector3Array([Vector3(0, H * 0.25, 0), Vector3(0, -l1 * 0.4, bend * l1), Vector3(0, -l1, 0)]),
-			PackedFloat32Array([tr, tr * 0.8, tr * 0.42]), 9, fur, true)
+		kt.tube(PackedVector3Array([Vector3(0, H * 0.3, 0), Vector3(0, H * 0.05, bend * l1 * 0.3), Vector3(0, -l1 * 0.45, bend * l1), Vector3(0, -l1 * 0.85, bend * 0.4 * l1), Vector3(0, -l1, 0)]),
+			PackedFloat32Array([tr * 1.15, tr * 1.1, tr * 0.78, tr * 0.5, tr * 0.46]), 12, fur, true)
+		kt.blob(Vector3(0, -l1, 0), Vector3(tr * 0.5, tr * 0.55, tr * 0.55), fur, 6, 8)
 		out["thigh_" + which] = kt.commit()
 		out["l1_" + which] = l1
 		var ks := MeshKit.new()
 		var sr := tr * 0.4
 		var hoof_y := -l2 + 0.03
-		ks.tube(PackedVector3Array([Vector3(0, 0.02, 0), Vector3(0, -l2 * 0.55, -bend * l2 * 0.5), Vector3(0, hoof_y + 0.08, 0)]),
-			PackedFloat32Array([sr, sr * 0.65, sr * 0.6]), 8, fur, true)
+		ks.tube(PackedVector3Array([Vector3(0, 0.02, 0), Vector3(0, -l2 * 0.3, -bend * l2 * 0.3), Vector3(0, -l2 * 0.7, -bend * l2 * 0.4), Vector3(0, hoof_y + 0.12, 0), Vector3(0, hoof_y + 0.07, -0.01)]),
+			PackedFloat32Array([sr * 1.05, sr * 0.72, sr * 0.6, sr * 0.75, sr * 0.62]), 10, fur, true)
 		ks.tag = Vector2(4, 0)
 		var hoof := Color(0.07, 0.06, 0.05)
 		if species == "howler":
@@ -182,8 +190,8 @@ static func parts(species: String) -> Dictionary:
 	var tr2 := PackedFloat32Array()
 	for i in 6:
 		var u := float(i) / 5.0
-		tpts.append(Vector3(0, -u * tl2 * (0.9 if species != "howler" else 0.4), u * tl2 * (0.25 if species != "howler" else 0.9)))
-		tr2.append(lerpf(W * 0.07, W * 0.025, u))
+		tpts.append(Vector3(0, -u * tl2 * (0.9 if species != "howler" else 0.55) + (u * (1.0 - u) * tl2 * 0.5 if species == "howler" else 0.0), u * tl2 * (0.25 if species != "howler" else 0.75)))
+		tr2.append(lerpf(W * 0.07, W * 0.025, u) * (2.2 * sin(PI * clampf(u * 0.9 + 0.1, 0.0, 1.0)) + 0.4 if species == "howler" else 1.0))
 	kt2.tube(tpts, tr2, 6, fur, true)
 	if species in ["moorhorn", "ironcrown"]:
 		kt2.blob(tpts[5], Vector3(W * 0.06, W * 0.12, W * 0.06), fur.darkened(0.4), 5, 6, 0.3, 3)

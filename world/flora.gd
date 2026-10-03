@@ -190,7 +190,7 @@ func _rock(rng: RandomNumberGenerator, i: int) -> Dictionary:
 	var k := MeshKit.new()
 	k.tag = Vector2(2, 0)
 	var s := [Vector3(1.0, 0.7, 0.9), Vector3(2.2, 1.4, 1.8), Vector3(0.5, 0.35, 0.45), Vector3(3.5, 2.6, 3.0)][i] as Vector3
-	var col := Color(0.38, 0.36, 0.33).lerp(Color(0.48, 0.44, 0.39), rng.randf())
+	var col := Color(0.26, 0.25, 0.23).lerp(Color(0.36, 0.33, 0.3), rng.randf())
 	k.blob(Vector3(0, s.y * 0.25, 0), s, col, 10, 14, 0.38, rng.randi())
 	k.smooth_normals()
 	return {"mesh": k.commit(), "r": minf(s.x, s.z) * 0.85, "h": s.y, "rock": true}
@@ -439,7 +439,7 @@ func _grass_cell(k: Vector2i) -> Node3D:
 			continue
 		var b := terrain.biome_at(x, z)
 		var kind := "grass"
-		var col := Color(0.55, 0.5, 0.3).lerp(Color(0.66, 0.58, 0.36), rng.randf())
+		var col := Color(0.46, 0.43, 0.27).lerp(Color(0.58, 0.52, 0.33), rng.randf()).lerp(Color(0.36, 0.4, 0.22), rng.randf() * 0.5)
 		if b.r > 0.45:
 			if rng.randf() > 0.5:
 				continue

@@ -18,7 +18,7 @@ const WATER := 0.0
 ## Places the generator shapes the land around.
 const FARM := Vector2(-120.0, 260.0)
 const LAKE := Vector2(-560.0, 470.0)
-const BASIN := Vector2(560.0, -540.0)
+const BASIN := Vector2(560.0, -170.0)
 const RIDGE_Z := -380.0
 
 var heights := PackedFloat32Array()
@@ -98,10 +98,10 @@ func _macro(x: float, z: float, base: FastNoiseLite, ridge: FastNoiseLite, warp:
 	var wz := z + warp.get_noise_2d(z + 500.0, x) * 120.0
 	var h := 14.0 + base.get_noise_2d(wx, wz) * 22.0 + hills.get_noise_2d(wx, wz) * 6.0
 	# Northern ridges: ridged mountains rising past RIDGE_Z.
-	var north := smoothstep(RIDGE_Z + 150.0, RIDGE_Z - 250.0, z)
+	var north := smoothstep(RIDGE_Z + 150.0, RIDGE_Z - 250.0, z) * smoothstep(150.0, 330.0, Vector2(x, z).distance_to(BASIN))
 	h += north * (40.0 + (ridge.get_noise_2d(wx, wz) * 0.5 + 0.5) * 120.0)
 	# Eastern badlands: mesas.
-	var east := smoothstep(250.0, 600.0, x) * (1.0 - north)
+	var east := smoothstep(250.0, 600.0, x) * (1.0 - north) * smoothstep(200.0, 320.0, Vector2(x, z).distance_to(BASIN))
 	var mesa := clampf(base.get_noise_2d(wx * 2.0, wz * 2.0) * 3.0, -1.0, 1.0)
 	h += east * (smoothstep(0.1, 0.35, mesa) * 26.0 - 4.0)
 	# The lake.

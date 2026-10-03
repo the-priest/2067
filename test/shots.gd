@@ -47,7 +47,7 @@ func _ready() -> void:
 			await _shot("04_" + kind)
 			cc.queue_free()
 			world.creatures.erase(cc)
-	_cam_at(world.structures.mothership + Vector3(-220, 70, 160), world.structures.mothership)
+	_cam_at(world.structures.mothership + Vector3(-160, 40, 170), world.structures.mothership)
 	await _shot("05_mothership")
 	_cam_at(Vector3(-300, 80, 500), Vector3(-560, 0, 470))
 	await _shot("06_lake")

@@ -93,7 +93,7 @@ func build() -> void:
 	terrain.build_lod_now(player.global_position)
 	structures.refresh_wall()
 	atmo.apply_quality()
-	for i in 10:
+	for i in 18:
 		_spawn_herd(true)
 	hud = load("res://ui/hud.gd").new()
 	hud.name = "HUD"
@@ -200,7 +200,7 @@ func _spawn_herd(initial: bool = false) -> bool:
 	var pp := player.global_position if player != null else Vector3(Terrain.FARM.x, 0, Terrain.FARM.y)
 	for tries in 12:
 		var a := _rng.randf() * TAU
-		var d := _rng.randf_range(90.0 if initial else 260.0, 750.0)
+		var d := _rng.randf_range(70.0 if initial else 220.0, 650.0)
 		var x := pp.x + cos(a) * d
 		var z := pp.z + sin(a) * d
 		if not terrain.in_bounds(x, z, 150.0):
@@ -221,7 +221,7 @@ func _spawn_herd(initial: bool = false) -> bool:
 func spawn_herd(kind: String, at: Vector3, count: int = -1) -> Array:
 	var sp: Dictionary = Catalog.SPECIES[kind]
 	var hr: Array = sp["herd"]
-	var n := count if count > 0 else _rng.randi_range(int(hr[0]), int(hr[1]))
+	var n := count if count > 0 else _rng.randi_range(int(hr[0]), int(hr[1]) + 2)
 	var id := _next_herd
 	_next_herd += 1
 	var list: Array = []
@@ -246,9 +246,9 @@ func _manage_herds() -> void:
 		var list: Array = herds[id]
 		var all_far := true
 		for c in list:
-			var cr := c as Creature
-			if not is_instance_valid(cr):
+			if not is_instance_valid(c):
 				continue
+			var cr := c as Creature
 			var d := cr.global_position.distance_to(pp)
 			if d < 950.0 or cr.dead and not (cr.harvested_hide and cr.harvested_horn) and d < 1400.0:
 				all_far = false
@@ -261,7 +261,7 @@ func _manage_herds() -> void:
 	var alive := 0
 	for id in herds.keys():
 		alive += 1
-	if alive < 11:
+	if alive < 18:
 		_spawn_herd()
 	_legend()
 
@@ -351,11 +351,14 @@ func _on_killed(c: Creature, info: Dictionary) -> void:
 
 ## Dead animals you're standing over.
 func interactables() -> Array:
-	var out: Array = get_tree().get_nodes_in_group("interact")
+	var out: Array = []
+	out.append_array(get_tree().get_nodes_in_group("interact"))
 	var pp := player.global_position
 	for c in creatures:
+		if not is_instance_valid(c):
+			continue
 		var cr := c as Creature
-		if is_instance_valid(cr) and cr.dead and cr.death_t < 0.0 and not (cr.harvested_hide and cr.harvested_horn):
+		if cr.dead and cr.death_t < 0.0 and not (cr.harvested_hide and cr.harvested_horn):
 			if cr.global_position.distance_to(pp) < 12.0:
 				out.append(Carcass.of(cr, self))
 	return out
@@ -726,8 +729,10 @@ func _drone_tick(dt: float) -> void:
 	# Tag what's in view.
 	var now := Time.get_ticks_msec() / 1000.0
 	for c in creatures:
+		if not is_instance_valid(c):
+			continue
 		var cr := c as Creature
-		if not is_instance_valid(cr) or cr.dead:
+		if cr.dead:
 			continue
 		var d := cr.center() - _drone_cam.global_position
 		if d.length() < 320.0 and d.normalized().dot(-_drone_cam.global_transform.basis.z) > 0.8:

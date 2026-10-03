@@ -65,7 +65,7 @@ func _marks() -> void:
 	var f := UIStyle.bold()
 	var to := func(p: Vector3) -> Vector2:
 		return Vector2((p.x + Terrain.HALF) / Terrain.SIZE * s.x, (p.z + Terrain.HALF) / Terrain.SIZE * s.y)
-	var regions := {"FIELDS": Vector3(-100, 0, 420), "DEAD FOREST": Vector3(-560, 0, -50), "BADLANDS": Vector3(560, 0, 260), "THE RIDGES": Vector3(-100, 0, -700), "MARSH": Vector3(-560, 0, 700), "CRASH BASIN": Vector3(560, 0, -420), "LAKE": Vector3(-560, 0, 470)}
+	var regions := {"FIELDS": Vector3(-100, 0, 420), "DEAD FOREST": Vector3(-560, 0, -50), "BADLANDS": Vector3(600, 0, 380), "THE RIDGES": Vector3(-100, 0, -700), "MARSH": Vector3(-560, 0, 700), "CRASH BASIN": Vector3(560, 0, -60), "LAKE": Vector3(-560, 0, 470)}
 	for k in regions.keys():
 		var p: Vector2 = to.call(regions[k])
 		map_rect.draw_string(f, p - Vector2(80, 0), k, HORIZONTAL_ALIGNMENT_CENTER, 160, 15, Color(1, 0.95, 0.85, 0.75))

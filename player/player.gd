@@ -294,7 +294,7 @@ func _process(dt: float) -> void:
 func _view_model(dt: float) -> void:
 	_recoil = move_toward(_recoil, 0.0, dt * 4.0)
 	var hip := Vector3(0.16, -0.17, -0.32)
-	var ads := Vector3(0, -Guns.SIGHT, -0.22)
+	var ads := Vector3(0, -Guns.SIGHT, -0.34)
 	if gun_kind == "binoculars":
 		hip = Vector3(0.0, -0.25, -0.3)
 		ads = Vector3(0, 0, -0.08)
@@ -427,6 +427,13 @@ func _look_at_things(dt: float) -> void:
 			if dot > best:
 				best = dot
 				aim_creature = cr
+	# Spotting: glass an animal and it stays marked for a minute and a half.
+	if aim_creature != null and (scoped or binos) and not aim_creature.dead:
+		var now := Time.get_ticks_msec() / 1000.0
+		if aim_creature.tagged_until < now + 30.0:
+			if aim_creature.tagged_until < now:
+				Sfx.play("scanner", -14.0, 1.4)
+			aim_creature.tagged_until = now + 90.0
 	if aim_creature != null and not Game.seen_species.has(aim_creature.species):
 		Game.seen_species[aim_creature.species] = true
 		Game.journal("First sighting: %s." % aim_creature.name_text())

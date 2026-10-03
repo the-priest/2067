@@ -59,7 +59,7 @@ void fragment() {
 			float r = fract(sin(dot(floor(g), vec2(12.9, 78.2))) * 43758.5);
 			mark = (1.0 - smoothstep(0.12, 0.2, length(c))) * step(0.4, r) * (1.0 - belly);
 		} else if (pattern == 2) { // stripes
-			mark = smoothstep(0.55, 0.7, sin(along * 14.0 + sin(around * 6.28) * 0.6)) * (1.0 - belly);
+			mark = smoothstep(0.6, 0.85, sin(along * 9.0 + sin(around * 6.28 + along * 3.0) * 1.2 + f.g * 2.0)) * (1.0 - belly) * 0.7;
 		} else if (pattern == 3) { // saddle
 			mark = smoothstep(0.25, 0.15, abs(around - 0.0)) + smoothstep(0.75, 0.85, around);
 			mark *= smoothstep(0.1, 0.3, along) * smoothstep(1.4, 0.9, along);

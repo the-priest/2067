@@ -36,6 +36,7 @@ var awareness := 0.0
 var threat := Vector3.ZERO
 var tagged_until := 0.0
 var legendary := false
+var last_organ := ""
 
 var model: Node3D
 var skin: ShaderMaterial
@@ -73,15 +74,21 @@ func setup(w: Node, kind: String, at: Vector3, sd: int, herd: int) -> void:
 	herd_id = herd
 	_rng.seed = sd
 	legendary = bool(sp.get("legendary", false))
-	size = clampf(_rng.randfn(1.0, 0.11), 0.78, 1.25)
-	if _rng.randf() < 0.05 and not legendary:
-		size = _rng.randf_range(1.25, 1.45) # an old trophy animal
+	# The Visitors' blood grows them big.
+	size = clampf(_rng.randfn(1.1, 0.12), 0.85, 1.38)
+	if _rng.randf() < 0.06 and not legendary:
+		size = _rng.randf_range(1.38, 1.6) # an ancient trophy animal
 	horn = Horns.roll(kind, _rng, size)
 	max_hp = float(sp["hp"]) * size * size
 	hp = max_hp
 	home = at
 	_heading = _rng.randf() * TAU
 	_p = BodyBuilder.parts(kind)
+	tree_exiting.connect(func() -> void:
+		if world != null and world.get("creatures") != null:
+			world.creatures.erase(self)
+			var h: Array = world.herds.get(herd_id, [])
+			h.erase(self))
 	_build()
 	_place_hearts()
 	global_position = at
@@ -111,7 +118,7 @@ func _build() -> void:
 	skin.set_shader_parameter("pulse_rate", 0.9 + _rng.randf() * 0.6)
 	horn_mat = ShaderMaterial.new()
 	horn_mat.shader = preload("res://shaders/horn.gdshader")
-	horn_mat.set_shader_parameter("glow_col", sp["glow"])
+	horn_mat.set_shader_parameter("glow_col", Horns.glow_of(horn, sp["glow"]))
 	horn_mat.set_shader_parameter("detail", Tex.get_tex("detail"))
 	var vis_end := 1400.0 if legendary else 950.0
 	var torso := _mi(_p["torso"], skin, model, vis_end)
@@ -124,7 +131,7 @@ func _build() -> void:
 	head.position = _p["head_c"]
 	neck.add_child(head)
 	var hd := float(sp["body"]["head"])
-	var hk := Horns.build(horn, hd, sp["glow"], Color(0.28, 0.22, 0.17) if species != "ironcrown" else Color(0.22, 0.22, 0.24))
+	var hk := Horns.build(horn, hd, sp["glow"])
 	if not hk.empty():
 		var hm := _mi(hk.commit(), horn_mat, head, vis_end)
 		hm.name = "Horns"
@@ -185,7 +192,7 @@ func _place_hearts() -> void:
 	var W := float(_p["W"])
 	var cy := float(_p["torso_y"])
 	var zone: Array = sp["heart_zone"]
-	heart_r = float(sp["heart_r"])
+	heart_r = float(sp["heart_r"]) * 1.25 # a little forgiving
 	for i in int(sp.get("hearts", 1)):
 		var f := _rng.randf_range(float(zone[0]), float(zone[1]))
 		var p := Vector3(_rng.randf_range(-0.22, 0.22) * W, cy + _rng.randf_range(-0.25, 0.18) * H, f * L * 0.5)
@@ -319,6 +326,7 @@ func take_shot(at: Vector3, dir: Vector3, w: Dictionary, dmg: float) -> Dictiona
 	hide_q = maxf(0.0, hide_q - hole)
 	skin.set_shader_parameter("wet", minf(1.0, float(shots_taken) * 0.25))
 	world.blood_spray(at, dir, sp["glow"])
+	last_organ = organ
 	var res := {"organ": organ, "kill": false}
 	match organ:
 		"BRAIN":
@@ -472,7 +480,7 @@ func _sense_player(dt: float) -> void:
 	var gain := 0.0
 	# Sight.
 	var vis: float = pl.call("visibility")
-	var sight := float(sp["sight"]) * vis * (0.55 if Game.is_night() and species != "howler" else 1.0)
+	var sight := float(sp["sight"]) * 0.8 * vis * (0.55 if Game.is_night() and species != "howler" else 1.0)
 	if d < sight:
 		var to := (pp - global_position).normalized()
 		var fwd := -global_transform.basis.z
@@ -482,12 +490,13 @@ func _sense_player(dt: float) -> void:
 				gain += (1.0 - d / sight) * 1.6 * dt * (2.0 if pl.call("moving") else 0.7)
 	# Hearing.
 	var noise: float = pl.call("noise_radius")
-	if noise * float(sp["hearing"]) > d:
-		gain += (1.0 - d / (noise * float(sp["hearing"]))) * 1.2 * dt
+	var hear_r := noise * float(sp["hearing"]) * 0.8
+	if hear_r > d:
+		gain += (1.0 - d / hear_r) * 1.0 * dt
 	# Smell: downwind of you, and the wind's carrying.
 	if Time.get_ticks_msec() / 1000.0 > Game.scent_until:
 		var dw: float = world.atmo.downwind(pp, global_position)
-		var reach: float = 160.0 * float(sp["smell"]) * (0.4 + world.atmo.wind_strength)
+		var reach: float = 120.0 * float(sp["smell"]) * (0.4 + world.atmo.wind_strength)
 		if dw > 0.75 and d < reach:
 			gain += (1.0 - d / reach) * 2.0 * dt
 			if awareness < 0.4 and gain > 0.05:
@@ -586,7 +595,7 @@ func _brain(dt: float, pd: float) -> void:
 			_target = global_position + away.normalized() * 40.0
 			var wounded := clampf(1.0 - hp / max_hp, 0.0, 0.7)
 			_speed = move_toward(_speed, float(sp["run"]) * (1.0 - wounded * 0.6), dt * 10.0)
-			if _think <= 0.0 and global_position.distance_to(_flee_from) > 150.0:
+			if _think <= 0.0 and global_position.distance_to(_flee_from) > 110.0:
 				state = S.WALK
 				awareness = 0.5
 				home = global_position
@@ -748,7 +757,7 @@ func glass_info() -> String:
 	var t := name_text()
 	if legendary:
 		t = "THE IRONCROWN"
-	var sz := "young" if size < 0.92 else ("mature" if size < 1.12 else ("old" if size < 1.25 else "ANCIENT"))
+	var sz := "young" if size < 1.0 else ("mature" if size < 1.2 else ("old" if size < 1.38 else "ANCIENT"))
 	var cls := Catalog.horn_class(float(horn["score"]), species)
 	if species == "howler":
 		return "%s  (%s)" % [t, sz]

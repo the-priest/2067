@@ -43,12 +43,12 @@ func _ready() -> void:
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_light_color = Color(0.7, 0.6, 0.48)
-	env.fog_density = 1.0
-	env.fog_depth_begin = 80.0
+	env.fog_density = 0.7
+	env.fog_depth_begin = 150.0
 	env.fog_depth_end = 1500.0
 	env.fog_depth_curve = 1.6
 	env.fog_sun_scatter = 0.35
-	env.fog_aerial_perspective = 0.5
+	env.fog_aerial_perspective = 0.3
 	env.fog_sky_affect = 0.25
 	env.volumetric_fog_density = 0.006
 	env.volumetric_fog_albedo = Color(0.78, 0.7, 0.6)
@@ -91,7 +91,7 @@ func _ready() -> void:
 func apply_quality() -> void:
 	Settings.apply_to(get_viewport(), env, sun)
 	var d := Settings.q()
-	env.fog_depth_end = float(d["view"]) * 0.95
+	env.fog_depth_end = float(d["view"]) * 1.3
 	if ash != null:
 		ash.amount = int(600 * float(d["grass"])) + 100
 
@@ -128,7 +128,7 @@ func tick(delta: float) -> void:
 	sky_mat.set_shader_parameter("dusk", dusk)
 	sky_mat.set_shader_parameter("moon_dir", md)
 	env.ambient_light_energy = lerpf(0.35, 1.0, day)
-	env.fog_light_color = Color(0.08, 0.1, 0.13).lerp(Color(0.72, 0.62, 0.5), day).lerp(Color(0.85, 0.5, 0.3), dusk * 0.6)
+	env.fog_light_color = Color(0.08, 0.1, 0.13).lerp(Color(0.6, 0.53, 0.44), day).lerp(Color(0.85, 0.5, 0.3), dusk * 0.6)
 	env.volumetric_fog_albedo = env.fog_light_color
 	env.volumetric_fog_density = lerpf(0.004, 0.009, dusk + night_amt * 0.5)
 	env.tonemap_exposure = lerpf(1.6, 1.0, day)

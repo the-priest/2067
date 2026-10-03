@@ -58,15 +58,19 @@ static func build(kind: String) -> Node3D:
 	match kind:
 		"lever":
 			_stock(parts["wood"], walnut, 0.0)
-			parts["metal"].box(Vector3(0, 0.0, -0.08), Vector3(0.045, 0.07, 0.2), blue)
+			parts["metal"].box(Vector3(0, -0.008, -0.08), Vector3(0.04, 0.062, 0.2), blue)
 			parts["metal"].cyl(Vector3(0, 0.022, -0.16), Vector3(0, 0.022, -0.72), 0.011, 0.01, 10, dark)
 			parts["metal"].cyl(Vector3(0, 0.0, -0.18), Vector3(0, 0.0, -0.66), 0.009, 0.009, 8, dark)
 			parts["wood"].box(Vector3(0, 0.005, -0.32), Vector3(0.042, 0.04, 0.24), walnut)
 			# The lever loop.
 			parts["metal"].tube(PackedVector3Array([Vector3(0, -0.035, -0.02), Vector3(0, -0.08, -0.01), Vector3(0, -0.085, 0.07), Vector3(0, -0.04, 0.08)]), PackedFloat32Array([0.006, 0.006, 0.006, 0.006]), 6, dark, false)
 			# Sights.
-			parts["metal"].box(Vector3(0, SIGHT - 0.008, -0.69), Vector3(0.004, 0.016, 0.006), dark)
-			parts["metal"].box(Vector3(0, SIGHT - 0.012, -0.12), Vector3(0.03, 0.01, 0.006), dark)
+			# Front post, and the rear buckhorn with its notch.
+			parts["metal"].box(Vector3(0, SIGHT - 0.01, -0.69), Vector3(0.004, 0.02, 0.006), dark)
+			parts["metal"].blob(Vector3(0, SIGHT, -0.69), Vector3.ONE * 0.0025, Color(0.9, 0.85, 0.6), 4, 5)
+			for sx: float in [-1.0, 1.0]:
+				parts["metal"].box(Vector3(sx * 0.009, SIGHT - 0.008, -0.12), Vector3(0.012, 0.016, 0.005), dark)
+			parts["metal"].box(Vector3(0, SIGHT - 0.017, -0.12), Vector3(0.03, 0.008, 0.005), dark)
 			muzzle = -0.73
 		"bolt", "thumper":
 			var big := kind == "thumper"
@@ -138,5 +142,5 @@ static func build(kind: String) -> Node3D:
 
 
 static func _stock(k: MeshKit, c: Color, y: float) -> void:
-	k.tube(PackedVector3Array([Vector3(0, y - 0.01, 0.02), Vector3(0, y - 0.03, 0.14), Vector3(0, y - 0.055, 0.32)]), PackedFloat32Array([0.022, 0.026, 0.04]), 8, c, true, Vector3.UP, PackedFloat32Array([1.3, 1.6, 2.0]))
+	k.tube(PackedVector3Array([Vector3(0, y - 0.025, 0.02), Vector3(0, y - 0.06, 0.14), Vector3(0, y - 0.1, 0.32)]), PackedFloat32Array([0.02, 0.024, 0.036]), 8, c, true, Vector3.UP, PackedFloat32Array([1.3, 1.6, 2.0]))
 	k.box(Vector3(0, y - 0.05, -0.0), Vector3(0.03, 0.06, 0.05), c, Basis(Vector3.RIGHT, 0.4))

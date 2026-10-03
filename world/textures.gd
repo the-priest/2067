@@ -10,7 +10,7 @@ static var _cache: Dictionary = {}
 static func get_tex(name: String) -> Texture2D:
 	if _cache.has(name):
 		return _cache[name]
-	var path := "user://tex_v2_%s.png" % name
+	var path := "user://tex_v3_%s.png" % name
 	var img: Image = null
 	if FileAccess.file_exists(path):
 		img = Image.load_from_file(path)
@@ -102,8 +102,19 @@ static func _make(name: String) -> Image:
 				for x in 256:
 					var v5 := sw.get_pixel(x / 4, y * 4 % 1024).r
 					var ring := 0.5 + 0.5 * sin(v5 * 40.0)
-					iw.set_pixel(x, y, Color(v5, ring, v5 * 0.5 + ring * 0.5))
+					var g := 0.55 + v5 * 0.25 + ring * 0.2
+					iw.set_pixel(x, y, Color(g, g, g))
 			return iw
 		"rust":
-			return _rgb(256, _noise(61, 0.02, 5), _noise(62, 0.08, 3, FastNoiseLite.TYPE_CELLULAR), _noise(63, 0.15, 2))
+			var ra := _noise(61, 0.02, 5).get_seamless_image(256, 256)
+			var rb := _noise(62, 0.08, 3, FastNoiseLite.TYPE_CELLULAR).get_seamless_image(256, 256)
+			var ir := Image.create(256, 256, false, Image.FORMAT_RGB8)
+			for y in 256:
+				for x in 256:
+					var a := ra.get_pixel(x, y).r
+					var b := rb.get_pixel(x, y).r
+					var rust := smoothstep(0.55, 0.75, a * 0.7 + b * 0.5)
+					var base := 0.6 + a * 0.3
+					ir.set_pixel(x, y, Color(base, base, base).lerp(Color(0.9, 0.55, 0.3), rust * 0.6))
+			return ir
 	return Image.create(4, 4, false, Image.FORMAT_RGB8)

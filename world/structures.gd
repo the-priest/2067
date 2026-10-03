@@ -424,7 +424,7 @@ func _mothership(rng: RandomNumberGenerator) -> void:
 	var k: MeshKit = kits["hull"]
 	var yaw := 0.7
 	var b := Basis(Vector3.UP, yaw) * Basis(Vector3.FORWARD, 0.12) * Basis(Vector3.RIGHT, -0.08)
-	var o := Vector3(c.x, y - 6.0, c.y)
+	var o := Vector3(c.x, y - 2.5, c.y)
 	# Main hull: a flattened lofted spindle, broken in two.
 	for half in 2:
 		var pts := PackedVector3Array()
