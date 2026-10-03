@@ -254,6 +254,21 @@ func subtitle(who: String, text: String, col: Color, secs: float = 0.0) -> void:
 	_sub_lbl.visible = true
 
 
+## A big moment at the carcass: a record, or a diamond or mythic set.
+func record_banner(kind: String, sp_name: String, score: float, cls: String) -> void:
+	match kind:
+		"hall":
+			banner.text = "NEW ALL-TIME RECORD"
+		"species":
+			banner.text = "NEW %s RECORD" % sp_name.to_upper()
+		_:
+			banner.text = "%s TROPHY" % cls
+	banner_sub.text = "%s  ·  %.1f  ·  %s" % [sp_name, score, cls]
+	banner.add_theme_color_override("font_color", Catalog.class_color(cls))
+	_banner_t = 6.0
+	Sfx.play("rank", -2.0)
+
+
 func radio_alert(t: String) -> void:
 	banner.text = t
 	banner.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))

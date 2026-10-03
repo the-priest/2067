@@ -37,6 +37,9 @@ var next_raid_day := 2
 var raids_done := 0
 var xyla := false # has Xyla joined the farm
 var xyla_talk := 0
+var records: Dictionary = {} # species -> {best, cls, count, total, day}
+var hall: Array = [] # the top horns ever taken, best first
+const HALL_SIZE := 15
 
 
 func _ready() -> void:
@@ -168,6 +171,37 @@ func best_on_wall(species: String) -> float:
 		if t["species"] == species:
 			b = maxf(b, float(t["score"]))
 	return b
+
+
+## Every horn you take goes in the book. Returns what it broke:
+## "", "species" (best of its kind) or "hall" (#1 of everything).
+func record_horn(t: Dictionary) -> String:
+	var sp: String = t["species"]
+	var score := float(t["score"])
+	var r: Dictionary = records.get(sp, {"best": 0.0, "cls": "", "count": 0, "total": 0.0, "day": 0})
+	var broke := ""
+	if score > float(r["best"]):
+		if int(r["count"]) > 0:
+			broke = "species"
+		r["best"] = score
+		r["cls"] = t["class"]
+		r["day"] = day
+	r["count"] = int(r["count"]) + 1
+	r["total"] = float(r["total"]) + score
+	records[sp] = r
+	var was_top := 0.0 if hall.is_empty() else float(hall[0]["score"])
+	hall.append({"species": sp, "score": score, "class": t["class"], "day": day, "horn": t.get("horn", {})})
+	hall.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["score"]) > float(b["score"]))
+	while hall.size() > HALL_SIZE:
+		hall.pop_back()
+	if score > was_top and was_top > 0.0:
+		broke = "hall"
+	stat("class_" + String(t["class"]).to_lower())
+	return broke
+
+
+func best_taken(species: String) -> float:
+	return float((records.get(species, {}) as Dictionary).get("best", 0.0))
 
 
 # ---------------------------------------------------------------- shop
@@ -337,6 +371,8 @@ func new_game() -> void:
 	raids_done = 0
 	xyla = false
 	xyla_talk = 0
+	records = {}
+	hall = []
 	refresh_contracts()
 	journal("Grandpa's rifle, thirty rounds, Dale, and an alien broker on the radio. Time to hunt.")
 
@@ -348,7 +384,7 @@ func save_game() -> void:
 		"contracts": contracts, "stats": stats, "log": log_entries, "day": day,
 		"time": time_of_day, "seed": seed_world, "story": story, "seen": seen_species,
 		"legend_down": legend_down, "camps": camps, "defense": defense, "wall_hp": wall_hp,
-		"next_raid": next_raid_day, "raids": raids_done, "xyla": xyla, "xyla_talk": xyla_talk, "pos": [player_pos.x, player_pos.y, player_pos.z],
+		"next_raid": next_raid_day, "raids": raids_done, "xyla": xyla, "xyla_talk": xyla_talk, "records": records, "hall": hall, "pos": [player_pos.x, player_pos.y, player_pos.z],
 	}
 	var f := FileAccess.open(SAVE, FileAccess.WRITE)
 	if f != null:
@@ -390,6 +426,8 @@ func load_game() -> bool:
 	raids_done = int(s.get("raids", 0))
 	xyla = bool(s.get("xyla", false))
 	xyla_talk = int(s.get("xyla_talk", 0))
+	records = s.get("records", {})
+	hall = s.get("hall", [])
 	var p: Array = s.get("pos", [0, 0, 0])
 	player_pos = Vector3(float(p[0]), float(p[1]), float(p[2]))
 	if contracts.size() < 3:

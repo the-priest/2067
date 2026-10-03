@@ -408,6 +408,11 @@ func harvest(c: Creature) -> void:
 		if Game.carry(t2):
 			c.harvested_horn = true
 			took.append("%s %s: %.1f %s" % [c.name_text(), "fangs" if c.species == "howler" else "horns", score, cls])
+			var broke := Game.record_horn(t2)
+			if broke != "" and hud != null:
+				hud.call("record_banner", broke, c.name_text(), score, cls)
+			elif cls in ["DIAMOND", "MYTHIC"] and hud != null:
+				hud.call("record_banner", "class", c.name_text(), score, cls)
 			c.get_node("Model").find_child("Horns", true, false)
 			var hm: Node = c.head.get_node_or_null("Horns")
 			if hm != null:

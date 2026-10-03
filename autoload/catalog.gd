@@ -258,13 +258,14 @@ const RANK_NAMES := ["Farmhand", "Stalker", "Tracker", "Skinner", "Horn Hunter",
 static func horn_class(score: float, species: String) -> String:
 	var base := float(SPECIES[species].get("horn_len", 1.0)) * 100.0
 	var r := score / maxf(base, 1.0)
-	if r >= 1.45:
+	# Tuned so roughly: bronze 35%, silver 35%, gold 22%, diamond 7%, mythic 1%.
+	if r >= 2.4:
 		return "MYTHIC"
-	if r >= 1.25:
+	if r >= 1.8:
 		return "DIAMOND"
-	if r >= 1.08:
+	if r >= 1.35:
 		return "GOLD"
-	if r >= 0.9:
+	if r >= 1.08:
 		return "SILVER"
 	return "BRONZE"
 

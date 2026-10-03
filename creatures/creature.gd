@@ -841,4 +841,6 @@ func glass_info() -> String:
 	var cls := Catalog.horn_class(float(horn["score"]), species)
 	if species == "howler":
 		return "%s  (%s)" % [t, sz]
-	return "%s  %s  horns look %s" % [t, sz, cls]
+	var best := Game.best_taken(species)
+	var pb := ("   your best %.0f" % best) if best > 0.0 else "   first of its kind"
+	return "%s  %s  horns look %s%s" % [t, sz, cls, pb]
