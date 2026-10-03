@@ -3,3 +3,5 @@
 !icon.svg.import
 export_credentials.cfg
 build/*.tmp
+build/windows/
+build/linux/

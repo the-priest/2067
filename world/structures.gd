@@ -420,7 +420,7 @@ func _mothership(rng: RandomNumberGenerator) -> void:
 	var c := Terrain.BASIN
 	var y := terrain.height_at(c.x, c.y)
 	mothership = Vector3(c.x, y, c.y)
-	avoid.append(Vector3(c.x, c.y, 110.0))
+	avoid.append(Vector3(c.x, c.y, 170.0))
 	var k: MeshKit = kits["hull"]
 	var yaw := 0.7
 	var b := Basis(Vector3.UP, yaw) * Basis(Vector3.FORWARD, 0.12) * Basis(Vector3.RIGHT, -0.08)
@@ -437,23 +437,23 @@ func _mothership(rng: RandomNumberGenerator) -> void:
 			var z := lerpf(z0, z1, u)
 			var g := (z + 110.0) / 230.0
 			pts.append(Vector3(0, 0, z))
-			rad.append(28.0 * pow(sin(PI * clampf(g, 0.02, 0.98)), 0.6))
-			ry.append(0.32)
-		var hb := b if half == 0 else b * Basis(Vector3.UP, 0.18) * Basis(Vector3.RIGHT, 0.1)
+			rad.append(42.0 * pow(sin(PI * clampf(g, 0.02, 0.98)), 0.6))
+			ry.append(0.42)
+		var hb := b if half == 0 else b * Basis(Vector3.UP, 0.18) * Basis(Vector3.RIGHT, 0.32)
 		var part := MeshKit.new()
 		part.tube(pts, rad, 24, Color(0.2, 0.2, 0.24), true, Vector3.UP, ry, func(i: int, a: float) -> float:
 			return 1.0 + 0.04 * sin(a * 12.0) * float(i % 2))
-		part.append_to(k, Transform3D(hb, o + (Vector3(4, -2, 6) if half == 1 else Vector3.ZERO)))
+		part.append_to(k, Transform3D(hb, o + (b * Vector3(6, 4, 4) if half == 1 else Vector3.ZERO)))
 	# Ribs where the hull split.
 	for i in 9:
 		var z := -14.0 + i * 3.2
-		var r := 24.0 * (1.0 - absf(i - 4.0) * 0.04)
+		var r := 36.0 * (1.0 - absf(i - 4.0) * 0.04)
 		var pts2 := PackedVector3Array()
 		var rad2 := PackedFloat32Array()
 		for j in 9:
 			var a := lerpf(0.15, PI - 0.15, float(j) / 8.0)
-			pts2.append(Vector3(cos(a) * r, sin(a) * r * 0.32 + 1.0, z))
-			rad2.append(0.8)
+			pts2.append(Vector3(cos(a) * r, sin(a) * r * 0.42 + 1.0, z))
+			rad2.append(1.2)
 		var rk := MeshKit.new()
 		rk.tube(pts2, rad2, 6, Color(0.16, 0.16, 0.2), true, Vector3.FORWARD)
 		rk.append_to(k, Transform3D(b, o))
@@ -478,10 +478,10 @@ func _mothership(rng: RandomNumberGenerator) -> void:
 	for i in 11:
 		var z := -100.0 + i * 20.0
 		var g := (z + 110.0) / 230.0
-		var r := 28.0 * pow(sin(PI * clampf(g, 0.05, 0.95)), 0.6)
+		var r := 42.0 * pow(sin(PI * clampf(g, 0.05, 0.95)), 0.6)
 		var cs := CollisionShape3D.new()
 		var bx := BoxShape3D.new()
-		bx.size = Vector3(r * 1.7, r * 0.55, 20.0)
+		bx.size = Vector3(r * 1.7, r * 0.7, 20.0)
 		cs.shape = bx
 		cs.transform = Transform3D(b, o + b * Vector3(0, 0, z))
 		body.add_child(cs)

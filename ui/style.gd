@@ -17,13 +17,14 @@ static var _theme: Theme = null
 static func font(n: String) -> Font:
 	if _fonts.has(n):
 		return _fonts[n]
-	var f := FontFile.new()
 	var path := "res://ui/fonts/%s.woff2" % n
-	var data := FileAccess.get_file_as_bytes(path)
-	if data.is_empty():
-		return ThemeDB.fallback_font
-	f.data = data
-	f.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+	var f: FontFile = load(path) as FontFile if ResourceLoader.exists(path) else null
+	if f == null:
+		var data := FileAccess.get_file_as_bytes(path)
+		if data.is_empty():
+			return ThemeDB.fallback_font
+		f = FontFile.new()
+		f.data = data
 	f.generate_mipmaps = true
 	_fonts[n] = f
 	return f

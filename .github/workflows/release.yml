@@ -1,0 +1,34 @@
+name: Release
+
+# Publishes a GitHub release with the Windows and Linux builds from build/
+# attached, named after the version in project.godot (config/version). It
+# runs when RELEASE_NOTES.md changes on main (or by hand, or on a v* tag).
+# Versions with "beta" in them are marked as pre-releases.
+on:
+  push:
+    branches: [main]
+    paths: ['RELEASE_NOTES.md']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read the version
+        id: v
+        run: echo "version=$(grep -oP 'config/version="\K[^"]+' project.godot)" >> "$GITHUB_OUTPUT"
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.v.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: 2067: Hornfall ${{ steps.v.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          prerelease: ${{ contains(steps.v.outputs.version, 'beta') }}
+          files: |
+            build/*.zip
