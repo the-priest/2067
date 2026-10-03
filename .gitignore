@@ -1,0 +1,5 @@
+.godot/
+*.import
+!icon.svg.import
+export_credentials.cfg
+build/*.tmp
