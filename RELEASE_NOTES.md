@@ -1,7 +1,23 @@
-# 2067: Hornfall 0.2.0 beta
+# 2067: Hornfall 0.3.0 beta
 
 The first playable build of the hunt. Download the zip for your system, unzip, and run
 `2067.exe` (Windows) or `2067.x86_64` (Linux). Saves go in your user folder.
+
+## New in 0.3
+
+- Every rifle has a scope now, Grandpa's .30-30 included (3x).
+- Full controller support, laid out like the big hunting games: sticks to
+  move and look (with a little aim friction over animals), LT aim, RT fire,
+  LB hold breath, RB next gun, D-pad for binoculars, light, caller and scent,
+  D-pad up/down to zoom on the scope, B to crouch, X to use or hold to
+  harvest, Y reload, R3 thermal, LB+B cloak, LB+A drone. Rumble on shots and
+  hits. Every menu works with the pad.
+- Six new mutated species: Tigrath (tiger), Ursagore (bear with ram horns),
+  Mammothar (elephant), Rhinox (rhino with three horns), Girafflux (giraffe
+  with a crystal crown) and Leonix (lion with a mane of crystal quills).
+  Thirteen hybrids in all.
+- Six hunting camps hidden around the valley. Find one and you can fast
+  travel there (and home to the farm) from the map.
 
 ## New in 0.2
 

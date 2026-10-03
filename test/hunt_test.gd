@@ -80,7 +80,7 @@ func _shoot_at(c: Creature, point: Vector3, gun: String = "lever") -> void:
 	# Fire from 15 m off, in clear air, so hills and carcasses can't get in the way.
 	var back := (world.player.global_position - c.global_position)
 	back.y = 0.0
-	var from := point + back.normalized() * 15.0 + Vector3(0, 0.8, 0)
+	var from := point + back.normalized() * 8.0 + Vector3(0, 0.4, 0)
 	var d := (point - from).normalized()
 	# Undo the zero so the round flies straight at the point over this range.
 	world.fire(from, d, gun, world.player)
