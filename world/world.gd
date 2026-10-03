@@ -410,7 +410,7 @@ func fire(origin: Vector3, dir: Vector3, kind: String, shooter: Node) -> void:
 	var t100 := 100.0 / v
 	var lift := 0.5 * 9.81 * drop * t100 * t100 / 100.0
 	var d := (dir + Vector3(0, lift, 0)).normalized()
-	var b := {"pos": origin, "vel": d * v, "w": w, "kind": kind, "v0": v, "life": 4.0, "drop": drop, "exclude": [shooter.get_rid()], "hits": 0, "trace": null, "dist": 0.0}
+	var b := {"origin": origin, "pos": origin, "vel": d * v, "w": w, "kind": kind, "v0": v, "life": 4.0, "drop": drop, "exclude": [shooter.get_rid()], "hits": 0, "trace": null, "dist": 0.0}
 	if kind == "plasma":
 		b["trace"] = _plasma_ball(origin)
 	if kind == "rail":
@@ -445,6 +445,9 @@ func _fly_bullets(dt: float) -> void:
 				Game.stat("hits")
 				if hud != null:
 					hud.call("hit_marker", res, float(b["dist"]) + 0.0)
+				var org: String = res.get("organ", "")
+				if Settings.killcam and not test_mode and float(b["dist"]) > 70.0 and org in ["HEART", "BRAIN", "LUNGS", "SPINE"] and (org == "HEART" or randf() < 0.5) and get_node_or_null("KillCam") == null:
+					KillCam.play(self, b["origin"], hp, col as Creature, org)
 				if bool(w.get("pierce", false)) and int(b["hits"]) < 3:
 					b["hits"] = int(b["hits"]) + 1
 					(b["exclude"] as Array).append((col as CollisionObject3D).get_rid())

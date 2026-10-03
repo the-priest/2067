@@ -43,6 +43,13 @@ func build() -> void:
 		Settings.invert_y = b
 		Settings.save())
 	box.add_child(inv)
+	var kc := CheckBox.new()
+	kc.text = "Bullet cam on long vital shots"
+	kc.button_pressed = Settings.killcam
+	kc.toggled.connect(func(b: bool) -> void:
+		Settings.killcam = b
+		Settings.save())
+	box.add_child(kc)
 	var vs := CheckBox.new()
 	vs.text = "V-Sync"
 	vs.button_pressed = Settings.vsync

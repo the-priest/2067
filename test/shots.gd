@@ -55,6 +55,32 @@ func _ready() -> void:
 	await _shot("07_forest")
 	_cam_at(Vector3(0, 120, -200), Vector3(0, 80, -800))
 	await _shot("08_ridges")
+	# The bullet cam.
+	world.player.cam.top_level = false
+	world.player.cam.transform = Transform3D.IDENTITY
+	var tp := world.player.global_position + Vector3(120, 0, 0)
+	tp.y = world.terrain.height_at(tp.x, tp.z)
+	var kc: Creature = world.spawn_herd("moorhorn", tp, 1)[0]
+	kc.set_physics_process(false)
+	await get_tree().process_frame
+	var from := kc.heart_world(0) + Vector3(-110, 1.0, 0)
+	world.fire(from, (kc.heart_world(0) - from).normalized(), "bolt", world.player)
+	var bb: Dictionary = world.bullets[world.bullets.size() - 1]
+	bb["drop"] = 0.0
+	bb["vel"] = (kc.heart_world(0) - from).normalized() * 820.0
+	for i in 60:
+		await get_tree().process_frame
+		if world.get_node_or_null("KillCam") != null:
+			break
+	print("killcam: ", world.get_node_or_null("KillCam") != null, " organ ", kc.last_organ)
+	var t0 := Time.get_ticks_msec()
+	await get_tree().create_timer(0.03, true, false, true).timeout
+	while Time.get_ticks_msec() - t0 < 900:
+		await get_tree().process_frame
+	await _shot2("09_killcam_ride")
+	while Time.get_ticks_msec() - t0 < 2600:
+		await get_tree().process_frame
+	await _shot2("10_killcam_orbit")
 	print("SHOTS DONE")
 	get_tree().quit()
 
@@ -78,4 +104,10 @@ func _shot(n: String) -> void:
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	img.save_png(dir + "/" + n + ".png")
+	print("SHOT ", n)
+
+
+func _shot2(n: String) -> void:
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(dir + "/" + n + ".png")
 	print("SHOT ", n)

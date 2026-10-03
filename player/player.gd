@@ -111,7 +111,7 @@ func weapon() -> Dictionary:
 # ---------------------------------------------------------------- input
 
 func _unhandled_input(e: InputEvent) -> void:
-	if dead or world == null or world.ui_open():
+	if dead or world == null or world.ui_open() or world.get_node_or_null("KillCam") != null:
 		return
 	if e is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var s := Settings.sens * (cam.fov / Settings.fov)

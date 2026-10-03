@@ -1,7 +1,16 @@
-# 2067: Hornfall 0.1.0 beta
+# 2067: Hornfall 0.2.0 beta
 
 The first playable build of the hunt. Download the zip for your system, unzip, and run
 `2067.exe` (Windows) or `2067.x86_64` (Linux). Saves go in your user folder.
+
+## New in 0.2
+
+- Bullet cam: long shots into the heart, lungs, brain or spine play back in
+  slow motion, riding the round into the animal and showing the hit through
+  its hide (turn it off in Settings).
+- The mothership is far bigger and breaks the skyline over the crash basin,
+  which now sits out in the open east of the ridges.
+- Fixed: carcasses can be harvested (hold E over the body).
 
 ## What's in it
 
