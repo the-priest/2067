@@ -65,6 +65,16 @@ var _lie := 0.0
 var _flee_from := Vector3.ZERO
 var _stuck := 0.0
 var _rng := RandomNumberGenerator.new()
+var _fur: ShaderMaterial = null
+var _fur_on := false
+var _thermal_on := false
+
+## How long each species' coat is (m). The elephant and the rhino are bare.
+const FUR := {"moorhorn": 0.028, "stagwraith": 0.016, "tuskmaw": 0.035, "ramspire": 0.045, "crownelk": 0.032,
+	"howler": 0.04, "tigrath": 0.016, "ursagore": 0.055, "mammothar": 0.0, "rhinox": 0.0, "girafflux": 0.01,
+	"leonix": 0.022, "ironcrown": 0.07}
+const SHELLS := 6
+static var _shell_cache: Dictionary = {}
 
 
 func setup(w: Node, kind: String, at: Vector3, sd: int, herd: int) -> void:
@@ -120,6 +130,7 @@ func _build() -> void:
 	if species == "tigrath":
 		skin.set_shader_parameter("mark_dark", 0.08)
 		skin.set_shader_parameter("stripe_f", 26.0)
+	_fur = _shell_chain()
 	horn_mat = ShaderMaterial.new()
 	horn_mat.shader = preload("res://shaders/horn.gdshader")
 	horn_mat.set_shader_parameter("glow_col", Horns.glow_of(horn, sp["glow"]))
@@ -175,6 +186,32 @@ func _build() -> void:
 	cs2.position = (piv + sn * 0.5) * size
 	cs2.rotation.x = atan2(sn.y, -sn.z)
 	add_child(cs2)
+
+
+## The fur: a chain of shell passes, shared by every animal of a species.
+func _shell_chain() -> ShaderMaterial:
+	var fl := float(FUR.get(species, 0.0))
+	if fl <= 0.0:
+		return null
+	if _shell_cache.has(species):
+		return _shell_cache[species]
+	var first: ShaderMaterial = null
+	var prev: ShaderMaterial = null
+	for i in SHELLS:
+		var m := ShaderMaterial.new()
+		m.shader = preload("res://shaders/fur_shell.gdshader")
+		for k in ["fur", "fur_n", "glow_col", "belly_col", "pattern", "mark_k", "mark_dark", "stripe_f"]:
+			m.set_shader_parameter(k, skin.get_shader_parameter(k))
+		m.set_shader_parameter("shell", float(i + 1) / SHELLS)
+		m.set_shader_parameter("fur_len", fl)
+		m.set_shader_parameter("density", 18.0 if fl < 0.03 else 13.0)
+		if prev != null:
+			prev.next_pass = m
+		else:
+			first = m
+		prev = m
+	_shell_cache[species] = first
+	return first
 
 
 func _mi(m: Mesh, mat: Material, parent: Node3D, vis: float) -> MeshInstance3D:
@@ -270,6 +307,7 @@ func show_vitals(level: int) -> void:
 
 
 func set_thermal(on: bool) -> void:
+	_thermal_on = on
 	skin.set_shader_parameter("thermal", 1.0 if on else 0.0)
 
 
@@ -691,7 +729,13 @@ func _process(dt: float) -> void:
 	if world == null or dead and death_t < 0.0 and _fall >= 1.0:
 		return
 	var cam := get_viewport().get_camera_3d()
-	if cam != null and cam.global_position.distance_to(global_position) > 260.0 and Engine.get_process_frames() % 4 != 0:
+	var cd := cam.global_position.distance_to(global_position) if cam != null else 999.0
+	# Fur up close only: it's the most expensive thing about an animal.
+	var want_fur := _fur != null and cd < 45.0 and not _thermal_on
+	if want_fur != _fur_on:
+		_fur_on = want_fur
+		skin.next_pass = _fur if want_fur else null
+	if cd > 260.0 and Engine.get_process_frames() % 4 != 0:
 		return
 	var spd := _speed
 	var run := spd > float(sp["speed"]) * 2.0

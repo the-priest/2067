@@ -1,0 +1,3 @@
+Terrain textures (grass, rock, sand, snow and their normal maps) are from the
+metaverse-terrain package by Richard Anaya, MIT licensed (see
+LICENSE-metaverse-terrain.txt). https://github.com/richardanaya/metaverse-terrain

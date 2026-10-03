@@ -463,9 +463,7 @@ func _ground(c: Color, mountains: float = 12.0) -> void:
 	mi.mesh = k.commit()
 	var m := ShaderMaterial.new()
 	m.shader = load("res://shaders/terrain.gdshader")
-	m.set_shader_parameter("noise_a", Tex.get_tex("detail"))
-	m.set_shader_parameter("noise_n", Tex.get_tex("detail_n"))
-	m.set_shader_parameter("macro", Tex.get_tex("macro"))
+	Tex.apply_terrain(m)
 	mi.material_override = m
 	stage.add_child(mi)
 

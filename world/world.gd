@@ -62,7 +62,7 @@ func build() -> void:
 	terrain.lod1 = float(q["lod1"])
 	progress.emit(0.3, "Painting the ground")
 	await get_tree().process_frame
-	terrain.build_material({"noise_a": Tex.get_tex("detail"), "noise_n": Tex.get_tex("detail_n"), "macro": Tex.get_tex("macro")})
+	terrain.build_material(Tex.terrain_params())
 	terrain.build_collision()
 	terrain.build_all_coarse()
 	atmo = Atmosphere.new()

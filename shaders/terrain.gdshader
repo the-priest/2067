@@ -1,14 +1,22 @@
 shader_type spatial;
-// The valley floor. Layers are picked per pixel from height, slope and the
-// biome painted into the vertex colour (r corruption, g wet, b ash):
-// dead grass, bare dirt, ash, mud, shore sand, layered rock on the steeps,
-// and in the crash basin a black alien crust shot through with glowing veins.
+// The valley floor, from real ground textures: grass (dried and bleached by
+// thirty years of fallout), packed dirt and ash, mud, shore sand, layered rock
+// on the steeps, and in the crash basin a black alien crust shot through with
+// glowing veins. Every texture is sampled at two scales and blended by a slow
+// macro noise so the tiling never shows. Layers are picked from height, slope
+// and the biome painted into the vertex colour (r corruption, g wet, b ash).
 
+uniform sampler2D tex_grass : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D tex_grass_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D tex_rock : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D tex_rock_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D tex_sand : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D tex_sand_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D noise_a : filter_linear_mipmap, repeat_enable;
 uniform sampler2D noise_n : hint_normal, filter_linear_mipmap, repeat_enable;
 uniform sampler2D macro : filter_linear_mipmap, repeat_enable;
 uniform vec3 vein_col : source_color = vec3(0.25, 1.0, 0.85);
-uniform float night = 0.0;
+global uniform float night;
 
 varying vec3 wpos;
 varying vec3 wnrm;
@@ -20,60 +28,78 @@ void vertex() {
 	bio = COLOR;
 }
 
+// Two scales, rotated against each other, mixed by macro noise: no tiling.
+vec3 two(sampler2D t, vec2 uv, float s, float m) {
+	vec2 r = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * uv;
+	vec3 a = texture(t, uv * s).rgb;
+	vec3 b = texture(t, r * s * 0.37 + 0.31).rgb;
+	return mix(a, b, smoothstep(0.3, 0.7, m));
+}
+
 vec3 tri(sampler2D t, vec3 p, vec3 n, float s) {
 	vec3 b = pow(abs(n), vec3(4.0));
 	b /= (b.x + b.y + b.z);
 	return texture(t, p.zy * s).rgb * b.x + texture(t, p.xz * s).rgb * b.y + texture(t, p.xy * s).rgb * b.z;
 }
 
+vec3 desat(vec3 c, float k) {
+	float l = dot(c, vec3(0.299, 0.587, 0.114));
+	return mix(c, vec3(l), k);
+}
+
 void fragment() {
 	vec2 uv = wpos.xz;
 	float slope = 1.0 - wnrm.y;
-	float d1 = texture(noise_a, uv * 0.11).r;
-	float d2 = texture(noise_a, uv * 0.53).g;
-	float d3 = texture(noise_a, uv * 2.1).b;
 	float m = texture(macro, uv * 0.0021).r;
 	float m2 = texture(macro, uv * 0.0007 + 0.3).g;
-	float detail = d1 * 0.45 + d2 * 0.35 + d3 * 0.2;
+	float m3 = texture(macro, uv * 0.006 + 0.7).b;
+	float d1 = texture(noise_a, uv * 0.11).r;
+	float d3 = texture(noise_a, uv * 2.1).b;
 
-	vec3 grass = mix(vec3(0.29, 0.28, 0.17), vec3(0.4, 0.37, 0.23), m) * (0.75 + detail * 0.5);
-	grass = mix(grass, vec3(0.22, 0.26, 0.14), smoothstep(0.5, 0.8, m2) * 0.7);
-	grass = mix(grass, vec3(0.34, 0.31, 0.27), smoothstep(0.6, 0.9, 1.0 - m2) * 0.5);
-	vec3 dirt = mix(vec3(0.27, 0.21, 0.15), vec3(0.36, 0.29, 0.21), d2) * (0.8 + d3 * 0.35);
-	vec3 ash = mix(vec3(0.29, 0.28, 0.27), vec3(0.4, 0.39, 0.37), d1) * (0.85 + d3 * 0.25);
-	vec3 mud = mix(vec3(0.13, 0.14, 0.09), vec3(0.22, 0.22, 0.13), d2) * (0.8 + d3 * 0.3);
-	vec3 sand = mix(vec3(0.3, 0.28, 0.23), vec3(0.38, 0.35, 0.29), d1);
-	vec3 rock_t = tri(noise_a, wpos, wnrm, 0.08);
-	float strata = sin(wpos.y * 0.9 + rock_t.r * 6.0 + d1 * 4.0) * 0.5 + 0.5;
-	vec3 rock = mix(vec3(0.21, 0.2, 0.19), vec3(0.33, 0.3, 0.27), strata * 0.35 + rock_t.g * 0.65) * (0.75 + rock_t.b * 0.4);
+	// Grass, dried out: the real green, bleached toward straw and olive.
+	vec3 g = two(tex_grass, uv, 0.22, m3);
+	vec3 dry = desat(g, 0.55) * vec3(1.35, 1.12, 0.62);
+	vec3 grass = mix(dry, g * vec3(0.9, 0.95, 0.75), smoothstep(0.55, 0.85, m2) * 0.45);
+	grass *= 0.85 + m * 0.3;
+	// Dirt and ash from the sand: darker, browner, greyer.
+	vec3 sd = two(tex_sand, uv, 0.15, m);
+	vec3 dirt = desat(sd, 0.35) * vec3(0.62, 0.52, 0.42);
+	vec3 ash = desat(sd, 0.9) * vec3(0.55, 0.54, 0.53);
+	vec3 mud = desat(sd, 0.5) * vec3(0.3, 0.28, 0.2);
+	vec3 sand = sd * vec3(0.78, 0.72, 0.62);
+	vec3 rk = tri(tex_rock, wpos, wnrm, 0.09);
+	vec3 rk2 = tri(tex_rock, wpos, wnrm, 0.023);
+	vec3 rock = mix(rk, rk2, 0.45) * vec3(0.95, 0.9, 0.85);
 
-	// Grass thins to dirt in patches and on worn ground.
-	float bare = smoothstep(0.45, 0.75, detail + (1.0 - m) * 0.25);
-	vec3 col = mix(grass, dirt, bare * 0.7);
-	col = mix(col, ash, smoothstep(0.45, 0.85, bio.b + d1 * 0.3 - 0.2) * 0.75);
+	float bare = smoothstep(0.45, 0.78, d1 * 0.6 + (1.0 - m) * 0.45 + d3 * 0.15);
+	vec3 col = mix(grass, dirt, bare * 0.75);
+	col = mix(col, ash, smoothstep(0.45, 0.85, bio.b + d1 * 0.3 - 0.2) * 0.7);
 	col = mix(col, mud, smoothstep(0.35, 0.7, bio.g) * 0.85);
-	col = mix(col, sand, smoothstep(2.2, 0.6, wpos.y) * (1.0 - smoothstep(0.35, 0.6, slope)));
+	col = mix(col, sand, smoothstep(2.4, 0.6, wpos.y) * (1.0 - smoothstep(0.35, 0.6, slope)));
 	col = mix(col, mud * 0.6, smoothstep(0.2, -1.0, wpos.y));
 
-	// The alien crust: near-black, iridescent, with veins that glow.
+	// The alien crust: rock gone black and iridescent.
 	float c = bio.r;
-	vec3 crust = mix(vec3(0.06, 0.05, 0.08), vec3(0.16, 0.1, 0.2), d2);
-	crust += vec3(0.05, 0.12, 0.14) * pow(d3, 3.0);
-	col = mix(col, crust, smoothstep(0.25, 0.65, c + (d1 - 0.5) * 0.4));
+	vec3 crust = desat(rock, 0.6) * vec3(0.22, 0.17, 0.28);
+	crust += vec3(0.04, 0.1, 0.12) * pow(d3, 3.0);
+	float cm = smoothstep(0.25, 0.65, c + (d1 - 0.5) * 0.4);
+	col = mix(col, crust, cm);
 
-	float rk = smoothstep(0.28, 0.48, slope + (d2 - 0.5) * 0.18);
-	rk = max(rk, smoothstep(50.0, 95.0, wpos.y + (d1 - 0.5) * 25.0) * 0.85);
-	col = mix(col, rock, rk);
+	float rkm = smoothstep(0.26, 0.46, slope + (d1 - 0.5) * 0.15);
+	rkm = max(rkm, smoothstep(50.0, 95.0, wpos.y + (d1 - 0.5) * 25.0) * 0.85);
+	col = mix(col, rock, rkm);
 
 	ALBEDO = col;
-	ROUGHNESS = mix(0.95, 0.75, rk) - smoothstep(0.4, 0.8, bio.g) * 0.25 - c * 0.3;
-	SPECULAR = 0.35;
-	vec3 nm = texture(noise_n, uv * 0.35).rgb;
-	vec3 nm2 = texture(noise_n, uv * 1.6).rgb;
-	NORMAL_MAP = normalize(mix(nm, nm2, 0.4));
-	NORMAL_MAP_DEPTH = mix(0.8, 1.6, rk);
+	ROUGHNESS = mix(0.93, 0.8, rkm) - smoothstep(0.4, 0.8, bio.g) * 0.3 - cm * 0.35;
+	SPECULAR = 0.3;
+	vec3 ng = texture(tex_grass_n, uv * 0.22).rgb;
+	vec3 ns = texture(tex_sand_n, uv * 0.15).rgb;
+	vec3 nr = texture(tex_rock_n, (abs(wnrm.x) > abs(wnrm.z) ? wpos.zy : wpos.xy) * 0.09).rgb;
+	vec3 nm = mix(ng, ns, max(bare * 0.75, smoothstep(2.4, 0.6, wpos.y)));
+	nm = mix(nm, nr, max(rkm, cm));
+	NORMAL_MAP = mix(nm, texture(noise_n, uv * 1.6).rgb, 0.2);
+	NORMAL_MAP_DEPTH = mix(1.0, 1.8, rkm);
 
-	// Veins: thin ridges in the noise that only show in the corrupted ground.
 	float vn = texture(noise_a, uv * 0.012).r;
 	float vein = 1.0 - smoothstep(0.0, 0.03, abs(vn - 0.5));
 	float vein2 = 1.0 - smoothstep(0.0, 0.02, abs(texture(noise_a, uv * 0.03 + 0.5).r - 0.5));

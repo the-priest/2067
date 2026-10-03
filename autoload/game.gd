@@ -456,6 +456,30 @@ func _inputs() -> void:
 	var nk := InputEventKey.new()
 	nk.physical_keycode = KEY_X
 	InputMap.action_add_event("next_gun", nk)
+	# Menus: A selects, B backs out, d-pad and left stick move everywhere.
+	var ui := {"ui_accept": [JOY_BUTTON_A], "ui_cancel": [JOY_BUTTON_B], "ui_up": [JOY_BUTTON_DPAD_UP],
+		"ui_down": [JOY_BUTTON_DPAD_DOWN], "ui_left": [JOY_BUTTON_DPAD_LEFT], "ui_right": [JOY_BUTTON_DPAD_RIGHT]}
+	for a in ui.keys():
+		for b in ui[a]:
+			var have := false
+			for ev in InputMap.action_get_events(a):
+				if ev is InputEventJoypadButton and (ev as InputEventJoypadButton).button_index == b:
+					have = true
+			if not have:
+				var jb2 := InputEventJoypadButton.new()
+				jb2.button_index = b
+				InputMap.action_add_event(a, jb2)
+	var sticks := {"ui_left": [JOY_AXIS_LEFT_X, -1.0], "ui_right": [JOY_AXIS_LEFT_X, 1.0], "ui_up": [JOY_AXIS_LEFT_Y, -1.0], "ui_down": [JOY_AXIS_LEFT_Y, 1.0]}
+	for a in sticks.keys():
+		var have2 := false
+		for ev in InputMap.action_get_events(a):
+			if ev is InputEventJoypadMotion and (ev as InputEventJoypadMotion).axis == sticks[a][0]:
+				have2 = true
+		if not have2:
+			var jm := InputEventJoypadMotion.new()
+			jm.axis = sticks[a][0]
+			jm.axis_value = sticks[a][1]
+			InputMap.action_add_event(a, jm)
 
 
 ## Was the last thing pressed on a controller? (for the button hints)

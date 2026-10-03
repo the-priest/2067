@@ -24,6 +24,22 @@ static func get_tex(name: String) -> Texture2D:
 	return t
 
 
+## Every texture the terrain shader wants, real and generated.
+static func terrain_params() -> Dictionary:
+	return {
+		"tex_grass": load("res://textures/grass.jpg"), "tex_grass_n": load("res://textures/grass_n.png"),
+		"tex_rock": load("res://textures/rock.jpg"), "tex_rock_n": load("res://textures/rock_n.png"),
+		"tex_sand": load("res://textures/sand.jpg"), "tex_sand_n": load("res://textures/sand_n.png"),
+		"noise_a": get_tex("detail"), "noise_n": get_tex("detail_n"), "macro": get_tex("macro"),
+	}
+
+
+static func apply_terrain(m: ShaderMaterial) -> void:
+	var d := terrain_params()
+	for k in d.keys():
+		m.set_shader_parameter(k, d[k])
+
+
 static func _noise(sd: int, f: float, oct: int, kind: int = FastNoiseLite.TYPE_SIMPLEX_SMOOTH, frac: int = FastNoiseLite.FRACTAL_FBM) -> FastNoiseLite:
 	var n := FastNoiseLite.new()
 	n.seed = sd
