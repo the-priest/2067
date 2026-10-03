@@ -103,6 +103,34 @@ static func build(kind: String) -> Node3D:
 			parts["glow"].cyl(Vector3(0, 0, -0.55), Vector3(0, 0, -0.62), 0.03, 0.02, 10, Color(1.0, 0.6, 0.3))
 			scope = true
 			muzzle = -0.63
+		"kestrel":
+			# Carbon chassis, skeleton stock, a glowing smart optic.
+			var carbon := Color(0.09, 0.1, 0.11)
+			parts["alien"].tube(PackedVector3Array([Vector3(0, -0.02, 0.02), Vector3(0, -0.05, 0.16), Vector3(0, -0.07, 0.3)]), PackedFloat32Array([0.016, 0.018, 0.03]), 6, carbon, true, Vector3.UP, PackedFloat32Array([1.6, 1.8, 2.2]))
+			parts["alien"].box(Vector3(0, -0.005, -0.12), Vector3(0.05, 0.07, 0.32), Color(0.14, 0.15, 0.16))
+			parts["alien"].box(Vector3(0, -0.06, -0.02), Vector3(0.03, 0.08, 0.04), carbon, Basis(Vector3.RIGHT, 0.35))
+			parts["metal"].cyl(Vector3(0, 0.0, -0.28), Vector3(0, 0.0, -0.84), 0.014, 0.012, 10, Color(0.12, 0.12, 0.13))
+			parts["alien"].cyl(Vector3(0, 0.0, -0.8), Vector3(0, 0.0, -0.9), 0.022, 0.02, 10, carbon)
+			parts["glow"].box(Vector3(0.026, 0.0, -0.15), Vector3(0.004, 0.012, 0.2), Color(0.3, 0.9, 1.0))
+			parts["glow"].box(Vector3(-0.026, 0.0, -0.15), Vector3(0.004, 0.012, 0.2), Color(0.3, 0.9, 1.0))
+			scope = true
+			muzzle = -0.9
+		"starfall":
+			var white := Color(0.78, 0.8, 0.82)
+			var dk := Color(0.12, 0.13, 0.15)
+			parts["alien"].tube(PackedVector3Array([Vector3(0, -0.02, 0.02), Vector3(0, -0.04, 0.18), Vector3(0, -0.06, 0.32)]), PackedFloat32Array([0.02, 0.024, 0.034]), 8, white, true, Vector3.UP, PackedFloat32Array([1.5, 1.7, 2.0]))
+			parts["alien"].box(Vector3(0, -0.01, -0.15), Vector3(0.06, 0.09, 0.42), white)
+			parts["alien"].box(Vector3(0, -0.07, -0.02), Vector3(0.035, 0.09, 0.045), dk, Basis(Vector3.RIGHT, 0.3))
+			parts["alien"].cyl(Vector3(0, 0.0, -0.35), Vector3(0, 0.0, -1.05), 0.016, 0.016, 10, dk)
+			for i in 5:
+				var z := -0.45 - i * 0.12
+				parts["glow"].cyl(Vector3(0, 0.0, z), Vector3(0, 0.0, z - 0.012), 0.022, 0.022, 10, Color(1.0, 0.75, 0.3))
+			parts["alien"].cyl(Vector3(0, 0, -1.02), Vector3(0, 0, -1.12), 0.028, 0.024, 10, dk)
+			# Bipod legs folded under.
+			for sx: float in [-1.0, 1.0]:
+				parts["metal"].cyl(Vector3(sx * 0.02, -0.03, -0.55), Vector3(sx * 0.03, -0.05, -0.3), 0.006, 0.006, 5, dk)
+			scope = true
+			muzzle = -1.12
 		"rail":
 			parts["alien"].box(Vector3(0, -0.01, 0.12), Vector3(0.05, 0.1, 0.3), Color(0.12, 0.12, 0.14))
 			parts["alien"].box(Vector3(0, -0.005, -0.12), Vector3(0.07, 0.08, 0.3), Color(0.16, 0.16, 0.18))
@@ -119,6 +147,10 @@ static func build(kind: String) -> Node3D:
 	if scope:
 		var sy := SIGHT
 		var sc := Color(0.08, 0.08, 0.09)
+		if kind in ["kestrel", "starfall"]:
+			sc = Color(0.16, 0.17, 0.19)
+			parts["glow"].cyl(Vector3(0, sy, -0.12), Vector3(0, sy, -0.135), 0.0185, 0.0185, 14, Color(0.3, 0.9, 1.0) if kind == "kestrel" else Color(1.0, 0.75, 0.3))
+			parts["metal"].box(Vector3(0.024, sy, -0.05), Vector3(0.012, 0.03, 0.06), Color(0.12, 0.12, 0.14))
 		parts["metal"].cyl(Vector3(0, sy, 0.06), Vector3(0, sy, -0.3), 0.017, 0.017, 14, sc)
 		parts["metal"].cyl(Vector3(0, sy, 0.1), Vector3(0, sy, 0.05), 0.021, 0.018, 14, sc)
 		parts["metal"].cyl(Vector3(0, sy, -0.3), Vector3(0, sy, -0.36), 0.018, 0.026, 14, sc)

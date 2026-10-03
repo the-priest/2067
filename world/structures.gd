@@ -22,6 +22,8 @@ var windmill: Node3D
 var mothership := Vector3.ZERO
 var avoid: Array = [] # Vector3(x, z, r): keep trees off these
 var camps: Array = [] # [name, Vector3]
+var post_spot := Vector3.ZERO # the trading post's door
+var clerk: Node3D = null
 
 
 func setup(w: Node, t: Terrain) -> void:
@@ -76,6 +78,7 @@ func build_all(sd: int) -> void:
 	_ruins(rng)
 	_road()
 	_camps()
+	_trading_post()
 	_commit()
 
 
@@ -101,6 +104,13 @@ func solid(kit: String, c: Vector3, size: Vector3, col: Color, b: Basis = Basis.
 		cs.shape = bs
 		cs.transform = Transform3D(b, c)
 		body.add_child(cs)
+
+
+func ground_max(x: float, z: float, r: float) -> float:
+	var h := -INF
+	for d in [Vector2(0, 0), Vector2(r, r), Vector2(-r, r), Vector2(r, -r), Vector2(-r, -r), Vector2(r, 0), Vector2(-r, 0), Vector2(0, r), Vector2(0, -r)]:
+		h = maxf(h, terrain.height_at(x + d.x, z + d.y))
+	return h
 
 
 func ground(x: float, z: float, r: float) -> float:
@@ -654,3 +664,134 @@ func _camps() -> void:
 		(kits["metal"] as MeshKit).box(rp + Vector3(0, 0.25, 0), Vector3(0.5, 0.5, 0.3), Color(0.2, 0.22, 0.2))
 		(kits["lamp"] as MeshKit).box(rp + Vector3(0, 0.35, 0.16), Vector3(0.2, 0.08, 0.01), Color(0.4, 1.0, 0.5))
 		Interactable.make(world, rp + Vector3(0, 0.5, 0), "Camp radio: Horn Exchange (buy, sell)", func(_p: Node) -> void: world.open_shop(), 2.5)
+
+
+
+## The Xhuul Horn Exchange trading post, out on the road east of the farm:
+## a corrugated shed with a sign you can see from the fields, guns racked on
+## the back wall, trophies on the sides, and Vex behind the counter.
+func _trading_post() -> void:
+	var c := Vector2(Terrain.FARM.x + 85.0, Terrain.FARM.y + 108.0)
+	var y := ground_max(c.x, c.y, 9.0) # the floor sits above the ground everywhere
+	# Steps up to the door.
+	solid("stone", Vector3(c.x, y - 0.25, c.y - 5.5 - 1.2), Vector3(4.0, 0.6, 2.4), Color(0.42, 0.4, 0.37))
+	avoid.append(Vector3(c.x, c.y, 18.0))
+	var o := Vector3(c.x, y, c.y)
+	var W := 16.0
+	var D := 11.0
+	var H := 4.2
+	var tin := Color(0.42, 0.4, 0.36)
+	var fy := o.y + 0.3
+	solid("stone", Vector3(o.x, o.y - 1.6, o.z), Vector3(W + 0.6, 3.8, D + 0.6), Color(0.4, 0.38, 0.35))
+	solid("wood", Vector3(o.x, fy - 0.05, o.z), Vector3(W, 0.1, D), Color(0.36, 0.3, 0.24))
+	var t := 0.2
+	var front := o.z - D * 0.5 # the door faces the road (north)
+	var back := o.z + D * 0.5
+	solid("metal", Vector3(o.x, fy + H * 0.5, back), Vector3(W, H, t), tin)
+	for sx: float in [-1.0, 1.0]:
+		solid("metal", Vector3(o.x + sx * W * 0.5, fy + H * 0.5, o.z), Vector3(t, H, D), tin)
+	var door := 3.0
+	var seg := (W - door) * 0.5
+	for sx: float in [-1.0, 1.0]:
+		solid("metal", Vector3(o.x + sx * (door * 0.5 + seg * 0.5), fy + H * 0.5, front), Vector3(seg, H, t), tin)
+	solid("metal", Vector3(o.x, fy + H - 0.5, front), Vector3(door, 1.0, t), tin)
+	solid("metal", Vector3(o.x, fy + H + 0.05, o.z), Vector3(W + 1.0, 0.12, D + 1.0), Color(0.35, 0.3, 0.26))
+	# Porch roof over the door.
+	solid("metal", Vector3(o.x, fy + H - 0.6, front - 1.6), Vector3(7.0, 0.08, 3.2), Color(0.38, 0.32, 0.27), Basis(Vector3.RIGHT, -0.12), false)
+	for sx: float in [-1.0, 1.0]:
+		solid("wood", Vector3(o.x + sx * 3.3, fy + 1.6, front - 3.0), Vector3(0.15, 3.2, 0.15), Color(0.4, 0.32, 0.24))
+	# The sign, glowing Xhuul teal.
+	(kits["lamp"] as MeshKit).box(Vector3(o.x, fy + H + 1.0, front - 0.15), Vector3(9.0, 1.3, 0.12), Color(0.12, 0.6, 0.55))
+	var sign := Label3D.new()
+	sign.text = "XHUUL HORN EXCHANGE"
+	sign.font = UIStyle.title()
+	sign.font_size = 120
+	sign.pixel_size = 0.006
+	sign.modulate = Color(0.85, 1.0, 0.95)
+	sign.outline_size = 12
+	sign.outline_modulate = Color(0.02, 0.15, 0.13)
+	add_child(sign)
+	sign.global_position = Vector3(o.x, fy + H + 1.0, front - 0.25)
+	sign.rotation.y = PI
+	var sub := Label3D.new()
+	sub.text = "WE BUY HORNS  ·  GUNS  ·  AMMO  ·  NO REFUNDS"
+	sub.font = UIStyle.bold()
+	sub.font_size = 48
+	sub.pixel_size = 0.006
+	sub.modulate = Color(1.0, 0.85, 0.5)
+	sub.outline_size = 8
+	add_child(sub)
+	sub.global_position = Vector3(o.x, fy + H - 0.3, front - 0.25)
+	sub.rotation.y = PI
+	# Inside: the counter, crates, lamps.
+	var cz := o.z + 1.2
+	solid("wood", Vector3(o.x, fy + 0.55, cz), Vector3(9.0, 1.1, 0.9), Color(0.38, 0.27, 0.18))
+	(kits["wood"] as MeshKit).box(Vector3(o.x, fy + 1.12, cz), Vector3(9.2, 0.06, 1.0), Color(0.5, 0.36, 0.22))
+	for i in 5:
+		solid("wood", Vector3(o.x - 6.5 + (i % 2) * 0.9, fy + 0.4 + (i / 2) * 0.8, o.z - 3.5 + i * 0.3), Vector3(0.8, 0.8, 0.8), Color(0.45, 0.36, 0.22))
+	for lx: float in [-4.0, 0.0, 4.0]:
+		var lt := OmniLight3D.new()
+		lt.light_color = Color(1.0, 0.8, 0.55)
+		lt.light_energy = 1.8
+		lt.omni_range = 7.0
+		add_child(lt)
+		lt.global_position = Vector3(o.x + lx, fy + H - 0.6, o.z)
+		(kits["lamp"] as MeshKit).blob(Vector3(o.x + lx, fy + H - 0.45, o.z), Vector3(0.18, 0.14, 0.18), Color(1.0, 0.85, 0.55), 5, 7)
+	var teal := OmniLight3D.new()
+	teal.light_color = Color(0.3, 1.0, 0.85)
+	teal.light_energy = 1.2
+	teal.omni_range = 6.0
+	add_child(teal)
+	teal.global_position = Vector3(o.x, fy + 2.0, back - 1.5)
+	# Every gun Vex sells, racked on the back wall.
+	var kinds := ["lever", "bolt", "thumper", "coil", "plasma", "rail"]
+	for i in kinds.size():
+		var g := Guns.build(kinds[i])
+		add_child(g)
+		g.scale = Vector3.ONE * 1.6
+		g.global_position = Vector3(o.x - 5.0 + i * 2.0, fy + 2.3, back - 0.25)
+		g.rotation = Vector3(0, PI * 0.5, PI * 0.5)
+		for m in g.get_children():
+			if m is MeshInstance3D:
+				(m as MeshInstance3D).layers = 1
+	(kits["wood"] as MeshKit).box(Vector3(o.x, fy + 2.3, back - 0.15), Vector3(13.0, 2.4, 0.06), Color(0.3, 0.22, 0.15))
+	# Trophies on the side walls: a few sets the Exchange is showing off.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2067
+	var show := ["moorhorn", "ramspire", "crownelk", "stagwraith", "mammothar", "rhinox"]
+	for i in show.size():
+		var sp: Dictionary = Catalog.SPECIES[show[i]]
+		var h := Horns.roll(show[i], rng, 1.35)
+		var hk := Horns.build(h, float(sp["body"]["head"]), sp["glow"])
+		var hm := MeshInstance3D.new()
+		hm.mesh = hk.commit()
+		var mat := ShaderMaterial.new()
+		mat.shader = load("res://shaders/horn.gdshader")
+		mat.set_shader_parameter("mounted", 1.0)
+		mat.set_shader_parameter("alive", 0.0)
+		mat.set_shader_parameter("detail", Tex.get_tex("detail"))
+		hm.material_override = mat
+		add_child(hm)
+		var sx := -1.0 if i < 3 else 1.0
+		hm.global_position = Vector3(o.x + sx * (W * 0.5 - 0.5), fy + 2.6, o.z - 2.5 + (i % 3) * 2.6)
+		hm.rotation.y = -sx * PI * 0.5
+		hm.scale = Vector3.ONE * clampf(1.0 / maxf(0.6, float(sp["horn_len"]) * float(h["size"])), 0.35, 0.9)
+		(kits["wood"] as MeshKit).blob(hm.global_position + Vector3(sx * 0.12, -0.1, 0), Vector3(0.05, 0.5, 0.4), Color(0.4, 0.25, 0.14), 6, 10)
+	# Vex.
+	clerk = Humanoid.make("grey", 77)
+	add_child(clerk)
+	clerk.global_position = Vector3(o.x, fy, cz + 1.2)
+	clerk.rotation.y = 0.0
+	(clerk as Humanoid).set_anim("idle")
+	var tag := Label3D.new()
+	tag.text = "VEX  ·  Exchange clerk"
+	tag.font = UIStyle.bold()
+	tag.font_size = 40
+	tag.pixel_size = 0.004
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	tag.modulate = Color(0.75, 1.0, 0.95)
+	tag.outline_size = 6
+	add_child(tag)
+	tag.global_position = clerk.global_position + Vector3(0, 2.0, 0)
+	Interactable.make(world, Vector3(o.x, fy + 1.3, cz - 0.3), "Talk to Vex: buy guns, ammo, gear  ·  sell horns and hides", func(_p: Node) -> void: world.open_shop(true), 3.2)
+	post_spot = Vector3(o.x, fy + 0.2, front - 4.0)

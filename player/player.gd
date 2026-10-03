@@ -56,6 +56,7 @@ var _heart_sfx := 0.0
 var _vitals_shown: Creature = null
 var _reload_count := 0
 var _pad_crouch := false
+var _air_jump := true # the suit's thrusters: one more jump in the air
 var _y_held := 0.0
 var _y_fired := false
 # The blink: Xhuul tech in a farmer's hands. R1 to aim, R1 to go, Circle to cancel.
@@ -174,11 +175,11 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e.is_action_pressed("binos"):
 		binos = not binos
 		equip("binoculars" if binos else Game.weapon)
-	for i in 6:
+	for i in 8:
 		if e.is_action_pressed("slot%d" % (i + 1)) and i < Game.weapons.size():
 			binos = false
 			equip(Game.weapons[i])
-	if e.is_action_pressed("thermal") and Game.has("thermal") and scoped:
+	if e.is_action_pressed("thermal") and (Game.has("thermal") or bool(weapon().get("thermal", false))) and scoped:
 		thermal = not thermal
 		world.set_thermal(thermal)
 	if e.is_action_pressed("cloak") and Game.has("cloak"):
@@ -233,11 +234,21 @@ func _physics_process(dt: float) -> void:
 	velocity.x = lerpf(velocity.x, wish.x, clampf(accel * dt, 0.0, 1.0))
 	velocity.z = lerpf(velocity.z, wish.z, clampf(accel * dt, 0.0, 1.0))
 	if is_on_floor():
+		_air_jump = true
 		if Input.is_action_just_pressed("jump") and not crouched and stamina > 10.0:
-			velocity.y = 6.0
-			stamina -= 10.0
+			velocity.y = 6.5
+			stamina -= 8.0
 	else:
 		velocity.y -= GRAVITY * dt
+		if Input.is_action_just_pressed("jump") and _air_jump:
+			# Double jump: the suit's thrusters kick.
+			_air_jump = false
+			velocity.y = 7.5
+			var fwd := Basis(Vector3.UP, _yaw) * Vector3(input.x, 0, input.y)
+			velocity.x += fwd.x * 2.5
+			velocity.z += fwd.z * 2.5
+			world.thrust(global_position)
+			Game.rumble(0.3, 0.2, 0.15)
 	_land_v = velocity.y
 	move_and_slide()
 	# Never fall through the world.
@@ -327,6 +338,10 @@ func _process(dt: float) -> void:
 	var t := Time.get_ticks_msec() / 1000.0
 	var tired := 1.0 + (100.0 - stamina) / 40.0
 	var amt := (0.0035 if crouched else 0.006) * tired * (0.12 if holding_breath else 1.0)
+	# Stabilised optics barely move; the gyro halves the rest.
+	amt *= float(weapon().get("stab", 1.0)) if not binos else 1.0
+	if Game.has("gyro"):
+		amt *= 0.5
 	if _moving:
 		amt *= 2.2
 	_sway = Vector2(sin(t * 0.9) + sin(t * 2.1) * 0.3, sin(t * 1.3 + 1.0) * 0.8 + sin(t * 0.5) * 0.4) * amt * aiming
@@ -495,7 +510,7 @@ func _look_at_things(dt: float) -> void:
 	if aim_creature != null and not Game.seen_species.has(aim_creature.species):
 		Game.seen_species[aim_creature.species] = true
 		Game.journal("First sighting: %s." % aim_creature.name_text())
-	var lv := Game.scanner_level()
+	var lv := maxi(Game.scanner_level(), int(weapon().get("scan", 0)))
 	var reach := [0.0, 120.0, 300.0, 600.0][lv] as float
 	if scoped and aim_creature != null and lv > 0 and from.distance_to(aim_creature.center()) < reach:
 		_vitals(aim_creature, lv)

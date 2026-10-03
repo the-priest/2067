@@ -801,7 +801,11 @@ func _end_drone() -> void:
 
 # ---------------------------------------------------------------- the farm
 
-func open_shop() -> void:
+func open_shop(in_person: bool = false) -> void:
+	if in_person and structures.clerk != null:
+		(structures.clerk as Humanoid).set_anim("wave")
+		hud.call("subtitle", "VEX", ["Welcome, welcome, small farm human. Everything is for sale. Including me, for the right horn.", "Ah, the hunter. Blorvak says you are his favourite bait. I mean client.", "Browse! Touch nothing sticky.", "Mythic horns, you have? No? Then perhaps... ammunition."][randi() % 4], Color(0.6, 1.0, 0.9))
+		get_tree().create_timer(2.0).timeout.connect(func() -> void: (structures.clerk as Humanoid).set_anim("idle"))
 	var s: Node = load("res://ui/shop.gd").new()
 	s.call("setup", self)
 	hud.add_child(s)
@@ -931,7 +935,7 @@ func open_travel() -> void:
 
 ## Every place you can fast travel to: the farm, and the camps you've found.
 func travel_spots() -> Array:
-	var out: Array = [["Your Farm", structures.farm_spawn]]
+	var out: Array = [["Your Farm", structures.farm_spawn], ["Horn Exchange Trading Post", structures.post_spot]]
 	for c in structures.camps:
 		if Game.camps.has(c[0]):
 			out.append([c[0], (c[1] as Vector3) + Vector3(3.0, 0.3, -2.0)])
@@ -1116,3 +1120,33 @@ func blinked(from: Vector3, to: Vector3) -> void:
 	if companion != null and companion.follow:
 		companion.global_position = to + Basis(Vector3.UP, player.rotation.y) * Vector3(2.4, 0, 3.2)
 	noise(to, 30.0, "snap")
+
+
+
+## The suit's thrusters fire (the double jump).
+func thrust(at: Vector3) -> void:
+	Sfx.play("blink", -10.0, 1.8)
+	var p := CPUParticles3D.new()
+	p.one_shot = true
+	p.emitting = true
+	p.amount = 24
+	p.lifetime = 0.5
+	p.explosiveness = 1.0
+	p.direction = Vector3.DOWN
+	p.spread = 30.0
+	p.initial_velocity_min = 3.0
+	p.initial_velocity_max = 6.0
+	var sm := SphereMesh.new()
+	sm.radius = 0.05
+	sm.height = 0.1
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = Color(0.5, 0.9, 1.0)
+	m.emission_enabled = true
+	m.emission = Color(0.4, 0.85, 1.0)
+	m.emission_energy_multiplier = 3.0
+	sm.material = m
+	p.mesh = sm
+	add_child(p)
+	p.global_position = at + Vector3(0, 0.3, 0)
+	get_tree().create_timer(1.0).timeout.connect(p.queue_free)

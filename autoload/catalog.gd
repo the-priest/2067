@@ -188,7 +188,7 @@ const WEAPONS := {
 		"name": "Grandpa's .30-30", "desc": "Lever action with an old 3x scope Grandpa took off a dead Marine in '41. Six in the tube. It got your family through the first winter.",
 		"rank": 1, "price": 0, "dmg": 70.0, "vel": 640.0, "mag": 6, "reload": 0.55, "per_round": true,
 		"rof": 0.75, "hide": 12.0, "noise": 420.0, "zoom": [3.0], "spread": 0.0012, "ammo": "30-30",
-		"sound": "rifle", "kind": "lever",
+		"sound": "rifle", "kind": "lever", "stab": 1.0,
 	},
 	"bolt": {
 		"name": "Ranch .308", "desc": "Bolt action with a 4x scope. Flat, honest and accurate past three hundred.",
@@ -200,25 +200,37 @@ const WEAPONS := {
 		"name": "Thumper .45-70", "desc": "Big bore for big animals. Hits like a truck, tears like one too. 6x scope.",
 		"rank": 3, "price": 2100, "dmg": 150.0, "vel": 610.0, "mag": 4, "reload": 2.8,
 		"rof": 1.4, "hide": 22.0, "noise": 560.0, "zoom": [6.0], "spread": 0.0009, "ammo": "45-70",
-		"sound": "big", "kind": "bolt",
+		"sound": "big", "kind": "bolt", "stab": 1.1,
 	},
 	"coil": {
 		"name": "Whisper Coil Rifle", "desc": "Salvaged Visitor tech. Magnetic, near silent, needle-thin holes. Herds don't even look up. 8x scope.",
 		"rank": 5, "price": 5200, "dmg": 115.0, "vel": 1500.0, "mag": 8, "reload": 2.0,
 		"rof": 0.6, "hide": 4.0, "noise": 45.0, "zoom": [4.0, 8.0], "spread": 0.0004, "ammo": "needles",
-		"sound": "coil", "kind": "coil",
+		"sound": "coil", "kind": "coil", "stab": 0.55,
 	},
 	"plasma": {
 		"name": "Helix Plasma Lance", "desc": "A slow, burning bolt of plasma. Drops anything, cooks the hide. Use it when the hide doesn't matter and the animal does.",
 		"rank": 7, "price": 9800, "dmg": 260.0, "vel": 260.0, "mag": 3, "reload": 3.0, "drop": 0.0,
 		"rof": 1.5, "hide": 38.0, "noise": 300.0, "zoom": [3.0], "spread": 0.0012, "ammo": "cells",
-		"sound": "plasma", "kind": "plasma", "burn": true, "splash": 1.4,
+		"sound": "plasma", "kind": "plasma", "stab": 0.8, "burn": true, "splash": 1.4,
+	},
+	"kestrel": {
+		"name": "Kestrel Smart Rifle", "desc": "2067 tech. Gyro-stabilised optic that barely sways, and a ballistic computer that paints exactly where the round will land. 4-12x. Quiet.",
+		"rank": 4, "price": 6400, "dmg": 125.0, "vel": 1150.0, "mag": 6, "reload": 1.8,
+		"rof": 0.7, "hide": 7.0, "noise": 140.0, "zoom": [4.0, 8.0, 12.0], "spread": 0.0003, "ammo": "smart",
+		"sound": "coil", "kind": "kestrel", "stab": 0.2, "smart": true,
+	},
+	"starfall": {
+		"name": "Starfall Marksman", "desc": "The best rifle money can buy after the end of the world. Fully stabilised 8-24x optic with ballistic dot, built-in heart scan and thermal. Reaches across the valley.",
+		"rank": 8, "price": 18500, "dmg": 240.0, "vel": 2800.0, "mag": 5, "reload": 2.4,
+		"rof": 1.1, "hide": 6.0, "noise": 220.0, "zoom": [8.0, 14.0, 24.0], "spread": 0.0001, "ammo": "lances",
+		"sound": "rail", "kind": "starfall", "stab": 0.08, "smart": true, "scan": 3, "thermal": true,
 	},
 	"rail": {
 		"name": "Skypiercer Rail", "desc": "The gun that brought down a Visitor scout. Goes straight through anything, at any range. 6-16x variable scope.",
 		"rank": 9, "price": 22000, "dmg": 330.0, "vel": 5000.0, "mag": 2, "reload": 3.6,
 		"rof": 2.0, "hide": 8.0, "noise": 650.0, "zoom": [6.0, 10.0, 16.0], "spread": 0.0002, "ammo": "slugs",
-		"sound": "rail", "kind": "rail", "pierce": true,
+		"sound": "rail", "kind": "rail", "stab": 0.45, "pierce": true,
 	},
 }
 
@@ -229,6 +241,8 @@ const AMMO := {
 	"needles": {"name": "Coil needles", "pack": 24, "price": 160},
 	"cells": {"name": "Plasma cells", "pack": 6, "price": 240},
 	"slugs": {"name": "Rail slugs", "pack": 6, "price": 380},
+	"smart": {"name": "Smart rounds", "pack": 18, "price": 180},
+	"lances": {"name": "Starfall lances", "pack": 10, "price": 320},
 }
 
 ## Gear. Some is one-off kit, some you use up (uses).
@@ -236,6 +250,7 @@ const GEAR := {
 	"binoculars": {"name": "Binoculars", "desc": "Glass from before the Fall. Right mouse to look. Shows species at a glance.", "rank": 1, "price": 0},
 	"rangefinder": {"name": "Rangefinder", "desc": "Adds range in metres to your binoculars and scope.", "rank": 1, "price": 180},
 	"wind": {"name": "Wind Gauge", "desc": "A ribbon on your sleeve, and a needle on your compass. Animals downwind smell you.", "rank": 1, "price": 120},
+	"gyro": {"name": "Gyro Stabilizer", "desc": "Clips under any barrel. Halves the sway on the scope, every gun.", "rank": 2, "price": 1100},
 	"pack2": {"name": "Hauler's Pack", "desc": "Carry 4 trophies instead of 2.", "rank": 2, "price": 450},
 	"tracker": {"name": "Bio-Tracker Visor", "desc": "Hybrid blood glows through it, and so do fresh tracks. Never lose a wounded animal again.", "rank": 2, "price": 800},
 	"scanner1": {"name": "Heart Scanner Mk I", "desc": "Their hearts aren't where they should be. This shows roughly where, when you're scoped in under 120 m.", "rank": 2, "price": 1300},

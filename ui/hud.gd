@@ -488,6 +488,22 @@ func _draw_scope(sz: Vector2, p: Player) -> void:
 		draw.draw_circle(Vector2(c.x - o, c.y), 1.6, rc)
 	# Illuminated centre dot.
 	draw.draw_circle(c, 2.2, Color(1.0, 0.2, 0.1, 0.9))
+	# Smart optics: the ballistic computer paints where the round will land.
+	var wsm := p.weapon()
+	if bool(wsm.get("smart", false)) and p.range_m > 0.0:
+		var v := float(wsm["vel"])
+		var R := p.range_m
+		var t100 := 100.0 / v
+		var lift := 0.5 * 9.81 * t100 * t100 / 100.0
+		var drop := 0.5 * 9.81 * pow(R / v, 2.0) - lift * R
+		var ang := atan2(drop, R)
+		var px := ang / deg_to_rad(p.cam.fov) * sz.y
+		var ip := c + Vector2(0, px)
+		var sc := Color(0.3, 1.0, 0.9) if wsm["kind"] == "kestrel" else Color(1.0, 0.8, 0.35)
+		draw.draw_arc(ip, 6.0, 0, TAU, 24, sc, 1.6)
+		draw.draw_circle(ip, 1.6, sc)
+		draw.draw_string(UIStyle.bold(), ip + Vector2(12, 5), "%d m  ·  %+.2f mil" % [int(R), -ang * 1000.0], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, sc)
+		draw.draw_string(UIStyle.bold(), Vector2(c.x - r * 0.75, c.y - r * 0.72), "GYRO LOCK" if p.holding_breath or float(wsm.get("stab", 1.0)) < 0.3 else "GYRO", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, sc)
 	var f := UIStyle.bold()
 	var w := p.weapon()
 	var zooms: Array = w.get("zoom", [])
@@ -565,6 +581,8 @@ func _draw_compass(sz: Vector2, p: Player) -> void:
 	# The farm on the compass.
 	var fp := Vector3(Terrain.FARM.x, 0, Terrain.FARM.y) - p.global_position
 	_compass_mark(sz, w, y, yaw, span, atan2(fp.x, -fp.z), Color(1.0, 0.8, 0.4), "HOME")
+	var sp2: Vector3 = world.structures.post_spot - p.global_position
+	_compass_mark(sz, w, y, yaw, span, atan2(sp2.x, -sp2.z), UIStyle.TEAL, "SHOP")
 	# The wind.
 	if Game.has("wind"):
 		var wd: Vector2 = world.atmo.wind_dir

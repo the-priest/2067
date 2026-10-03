@@ -451,7 +451,7 @@ func _inputs() -> void:
 		"jump": [KEY_SPACE], "sprint": [KEY_SHIFT], "crouch": [KEY_CTRL, KEY_Z], "use": [KEY_E], "reload": [KEY_R],
 		"breath": [KEY_SHIFT], "thermal": [KEY_T], "cloak": [KEY_C], "drone": [KEY_G], "caller": [KEY_Q],
 		"scent": [KEY_V], "map": [KEY_M], "journal": [KEY_J], "pause": [KEY_ESCAPE], "slot1": [KEY_1],
-		"slot2": [KEY_2], "slot3": [KEY_3], "slot4": [KEY_4], "slot5": [KEY_5], "slot6": [KEY_6],
+		"slot2": [KEY_2], "slot3": [KEY_3], "slot4": [KEY_4], "slot5": [KEY_5], "slot6": [KEY_6], "slot7": [KEY_7], "slot8": [KEY_8],
 		"flash": [KEY_F], "help": [KEY_F1], "binos": [KEY_B], "inv": [KEY_TAB, KEY_I],
 	}
 	for a in keys.keys():

@@ -116,6 +116,9 @@ func _marks() -> void:
 		map_rect.draw_rect(Rect2(cp - Vector2(5, 5), Vector2(10, 10)), Color(1.0, 0.6, 0.2) if known else Color(0.6, 0.6, 0.6, 0.6))
 		if known:
 			map_rect.draw_string(f, cp + Vector2(8, 5), String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.75, 0.4))
+	var tp: Vector2 = to.call(world.structures.post_spot)
+	map_rect.draw_circle(tp, 7, UIStyle.TEAL)
+	map_rect.draw_string(f, tp + Vector2(10, 5), "HORN EXCHANGE (SHOP)", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UIStyle.TEAL)
 	var ms: Vector2 = to.call(world.structures.mothership)
 	map_rect.draw_circle(ms, 9, Color(0.4, 1.0, 0.85, 0.8))
 	map_rect.draw_string(f, ms + Vector2(12, 5), "MOTHERSHIP", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UIStyle.TEAL)
