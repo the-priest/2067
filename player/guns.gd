@@ -71,6 +71,7 @@ static func build(kind: String) -> Node3D:
 			for sx: float in [-1.0, 1.0]:
 				parts["metal"].box(Vector3(sx * 0.009, SIGHT - 0.008, -0.12), Vector3(0.012, 0.016, 0.005), dark)
 			parts["metal"].box(Vector3(0, SIGHT - 0.017, -0.12), Vector3(0.03, 0.008, 0.005), dark)
+			scope = true
 			muzzle = -0.73
 		"bolt", "thumper":
 			var big := kind == "thumper"

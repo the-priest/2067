@@ -272,23 +272,23 @@ func _process(dt: float) -> void:
 		ammo_lbl.text = "%d  /  %d" % [int(Game.mag.get(p.gun_kind, 0)), int(Game.ammo.get(a, 0))]
 		if p.reloading > 0.0:
 			ammo_lbl.text = "RELOADING"
-	var hints := ["B glass", "R reload"]
+	var hints := ["%s glass" % Game.key("binos"), "%s reload" % Game.key("reload"), "%s next gun" % Game.key("next_gun")]
 	if Game.has("caller"):
-		hints.append("Q caller")
+		hints.append("%s caller" % Game.key("caller"))
 	if Game.has("scent"):
-		hints.append("V scent x%d" % int(Game.gear["scent"]))
+		hints.append("%s scent x%d" % [Game.key("scent"), int(Game.gear["scent"])])
 	if Game.has("cloak"):
-		hints.append("C cloak %d%%" % int(p.cloak_energy))
+		hints.append("%s cloak %d%%" % [Game.key("cloak"), int(p.cloak_energy)])
 	if Game.has("drone"):
-		hints.append("G drone")
+		hints.append("%s drone" % Game.key("drone"))
 	if Game.has("thermal"):
-		hints.append("T thermal")
-	hints.append("F light")
+		hints.append("%s thermal" % Game.key("thermal"))
+	hints.append("%s light" % Game.key("flash"))
 	hint_lbl.text = "  ".join(hints)
 	# Prompt.
 	var it: Object = p.interact_target
 	if it != null and not world.ui_open():
-		prompt.text = "[E] " + String(it.call("interact_text"))
+		prompt.text = "[%s] %s" % [Game.key("use"), String(it.call("interact_text"))]
 		var hold: float = it.call("interact_hold")
 		hold_bar.visible = hold > 0.0 and p.harvest_t > 0.0
 		if hold_bar.visible:
@@ -422,13 +422,13 @@ func _draw_scope(sz: Vector2, p: Player) -> void:
 	if not zooms.is_empty():
 		draw.draw_string(f, Vector2(c.x + r * 0.55, c.y + r * 0.75), "%dx" % int(zooms[mini(p.zoom_i, zooms.size() - 1)]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.9, 0.9, 0.85))
 		if zooms.size() > 1:
-			draw.draw_string(f, Vector2(c.x + r * 0.55, c.y + r * 0.75 + 22), "wheel: zoom", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.7, 0.7, 0.65))
+			draw.draw_string(f, Vector2(c.x + r * 0.55, c.y + r * 0.75 + 22), "D-pad: zoom" if Game.using_pad else "wheel: zoom", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.7, 0.7, 0.65))
 	# Breath.
 	var bw := 160.0
 	var by := c.y + r * 0.88
 	draw.draw_rect(Rect2(c.x - bw * 0.5, by, bw, 5), Color(0, 0, 0, 0.6))
 	draw.draw_rect(Rect2(c.x - bw * 0.5, by, bw * p.breath / 100.0, 5), Color(0.8, 0.9, 1.0, 0.9) if not p.holding_breath else Color(1.0, 0.9, 0.5, 0.95))
-	draw.draw_string(f, Vector2(c.x - 90, by - 8), "SHIFT: hold breath" if not p.holding_breath else "holding...", HORIZONTAL_ALIGNMENT_CENTER, 180, 14, Color(0.85, 0.85, 0.8))
+	draw.draw_string(f, Vector2(c.x - 90, by - 8), ("%s: hold breath" % Game.key("breath")) if not p.holding_breath else "holding...", HORIZONTAL_ALIGNMENT_CENTER, 180, 14, Color(0.85, 0.85, 0.8))
 	if Game.scanner_level() > 0:
 		draw.draw_string(f, Vector2(c.x - r * 0.75, c.y + r * 0.75), "HEART SCAN Mk %d" % Game.scanner_level(), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(1.0, 0.4, 0.5))
 

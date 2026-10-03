@@ -118,6 +118,10 @@ func _build_ui() -> void:
 	v.add_child(UIStyle.button("SETTINGS", func() -> void: _sub("res://ui/settings_panel.gd"), 340))
 	v.add_child(UIStyle.button("FIELD GUIDE", func() -> void: _sub("res://ui/help.gd"), 340))
 	v.add_child(UIStyle.button("QUIT", func() -> void: get_tree().quit(), 340))
+	for c in v.get_children():
+		if c is Button:
+			(c as Button).grab_focus.call_deferred()
+			break
 	var ver := UIStyle.label("v%s   ·   %s" % [ProjectSettings.get_setting("application/config/version"), "Forward+" if not Settings.compat() else "Compatibility renderer"], 14, UIStyle.DIM)
 	ver.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	ver.position = Vector2(20, -34)

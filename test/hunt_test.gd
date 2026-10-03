@@ -235,7 +235,7 @@ func _sights() -> void:
 	Input.action_press("aim")
 	await _frames(40)
 	_ok("aiming down the sights", p.aiming > 0.95)
-	_ok("iron sights don't use the scope", not p.scoped)
+	_ok("Grandpa's rifle has a scope too", p.scoped)
 	await _pic("ads_lever")
 	p.equip("bolt")
 	await _frames(40)

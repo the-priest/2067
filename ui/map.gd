@@ -11,7 +11,7 @@ func panel_title() -> String:
 
 
 func panel_size() -> Vector2:
-	return Vector2(820, 860)
+	return Vector2(1180, 860)
 
 
 func build() -> void:
@@ -22,8 +22,40 @@ func build() -> void:
 	map_rect.custom_minimum_size = Vector2(760, 760)
 	map_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	map_rect.stretch_mode = TextureRect.STRETCH_SCALE
-	box.add_child(map_rect)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	box.add_child(row)
+	row.add_child(map_rect)
 	map_rect.draw.connect(_marks)
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(330, 0)
+	side.add_theme_constant_override("separation", 8)
+	row.add_child(side)
+	side.add_child(UIStyle.label("FAST TRAVEL", 22, UIStyle.RUST, UIStyle.title()))
+	var why: String = world.can_travel()
+	if why != "":
+		side.add_child(UIStyle.label(why, 15, UIStyle.BAD))
+	for t in world.travel_spots():
+		var spot: Vector3 = t[1]
+		var b := UIStyle.button(String(t[0]).to_upper(), func() -> void:
+			close()
+			world.travel_to(spot), 320)
+		b.disabled = why != ""
+		side.add_child(b)
+	var left := 6 - Game.camps.size()
+	if left > 0:
+		side.add_child(UIStyle.label("%d camp%s still to find out there." % [left, "" if left == 1 else "s"], 14, UIStyle.DIM))
+	side.add_child(HSeparator.new())
+	side.add_child(UIStyle.button("JOURNAL", func() -> void:
+		close()
+		var j: Control = load("res://ui/journal.gd").new()
+		j.call("setup", world)
+		world.hud.add_child(j), 320))
+	side.add_child(UIStyle.button("FIELD GUIDE", func() -> void:
+		close()
+		var j: Control = load("res://ui/help.gd").new()
+		j.call("setup", world)
+		world.hud.add_child(j), 320))
 
 
 static func _render(t: Terrain) -> Image:
@@ -75,6 +107,12 @@ func _marks() -> void:
 	for pod in world.structures.pods:
 		var pp: Vector2 = to.call(pod)
 		map_rect.draw_circle(pp, 5, UIStyle.TEAL)
+	for c in world.structures.camps:
+		var cp: Vector2 = to.call(c[1])
+		var known := Game.camps.has(c[0])
+		map_rect.draw_rect(Rect2(cp - Vector2(5, 5), Vector2(10, 10)), Color(1.0, 0.6, 0.2) if known else Color(0.6, 0.6, 0.6, 0.6))
+		if known:
+			map_rect.draw_string(f, cp + Vector2(8, 5), String(c[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.75, 0.4))
 	var ms: Vector2 = to.call(world.structures.mothership)
 	map_rect.draw_circle(ms, 9, Color(0.4, 1.0, 0.85, 0.8))
 	map_rect.draw_string(f, ms + Vector2(12, 5), "MOTHERSHIP", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UIStyle.TEAL)

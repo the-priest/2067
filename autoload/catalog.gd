@@ -107,9 +107,9 @@ const SPECIES := {
 ## magnifications (empty = iron sights).
 const WEAPONS := {
 	"lever": {
-		"name": "Grandpa's .30-30", "desc": "Lever action. Iron sights, six in the tube. It got your family through the first winter.",
+		"name": "Grandpa's .30-30", "desc": "Lever action with an old 3x scope Grandpa took off a dead Marine in '41. Six in the tube. It got your family through the first winter.",
 		"rank": 1, "price": 0, "dmg": 70.0, "vel": 640.0, "mag": 6, "reload": 0.55, "per_round": true,
-		"rof": 0.75, "hide": 12.0, "noise": 420.0, "zoom": [], "spread": 0.0016, "ammo": "30-30",
+		"rof": 0.75, "hide": 12.0, "noise": 420.0, "zoom": [3.0], "spread": 0.0012, "ammo": "30-30",
 		"sound": "rifle", "kind": "lever",
 	},
 	"bolt": {

@@ -30,6 +30,7 @@ var legend_down := false
 var scent_until := 0.0
 var player_pos := Vector3.ZERO
 var has_save := false
+var camps: Dictionary = {} # discovered hunting camps
 
 
 func _ready() -> void:
@@ -320,6 +321,7 @@ func new_game() -> void:
 	legend_down = false
 	scent_until = 0.0
 	player_pos = Vector3.ZERO
+	camps = {}
 	refresh_contracts()
 	journal("Grandpa's rifle, thirty rounds, and the trader's on the radio. Time to hunt.")
 
@@ -330,7 +332,7 @@ func save_game() -> void:
 		"ammo": ammo, "mag": mag, "carried": carried, "wall": wall, "sold_total": sold_total,
 		"contracts": contracts, "stats": stats, "log": log_entries, "day": day,
 		"time": time_of_day, "seed": seed_world, "story": story, "seen": seen_species,
-		"legend_down": legend_down, "pos": [player_pos.x, player_pos.y, player_pos.z],
+		"legend_down": legend_down, "camps": camps, "pos": [player_pos.x, player_pos.y, player_pos.z],
 	}
 	var f := FileAccess.open(SAVE, FileAccess.WRITE)
 	if f != null:
@@ -365,6 +367,7 @@ func load_game() -> bool:
 	story = int(s.get("story", 0))
 	seen_species = s.get("seen", {})
 	legend_down = bool(s.get("legend_down", false))
+	camps = s.get("camps", {})
 	var p: Array = s.get("pos", [0, 0, 0])
 	player_pos = Vector3(float(p[0]), float(p[1]), float(p[2]))
 	if contracts.size() < 3:
@@ -407,16 +410,57 @@ func _inputs() -> void:
 	var m2 := InputEventMouseButton.new()
 	m2.button_index = MOUSE_BUTTON_RIGHT
 	InputMap.action_add_event("aim", m2)
-	# Pad
-	var pads := {"fire": JOY_AXIS_TRIGGER_RIGHT, "aim": JOY_AXIS_TRIGGER_LEFT}
-	for a in pads.keys():
+	# Controller, laid out like the big hunting games: sticks move and look,
+	# triggers aim and fire, bumpers breath and next gun, d-pad gear.
+	var axes := {"fire": [JOY_AXIS_TRIGGER_RIGHT, 1.0], "aim": [JOY_AXIS_TRIGGER_LEFT, 1.0],
+		"fwd": [JOY_AXIS_LEFT_Y, -1.0], "back": [JOY_AXIS_LEFT_Y, 1.0], "left": [JOY_AXIS_LEFT_X, -1.0], "right": [JOY_AXIS_LEFT_X, 1.0],
+		"look_up": [JOY_AXIS_RIGHT_Y, -1.0], "look_down": [JOY_AXIS_RIGHT_Y, 1.0], "look_left": [JOY_AXIS_RIGHT_X, -1.0], "look_right": [JOY_AXIS_RIGHT_X, 1.0]}
+	for a in axes.keys():
+		if not InputMap.has_action(a):
+			InputMap.add_action(a, 0.2)
 		var ja := InputEventJoypadMotion.new()
-		ja.axis = pads[a]
-		ja.axis_value = 1.0
+		ja.axis = axes[a][0]
+		ja.axis_value = axes[a][1]
 		InputMap.action_add_event(a, ja)
-	var btn := {"jump": JOY_BUTTON_A, "use": JOY_BUTTON_X, "reload": JOY_BUTTON_Y, "crouch": JOY_BUTTON_B,
-		"sprint": JOY_BUTTON_LEFT_STICK, "pause": JOY_BUTTON_START, "map": JOY_BUTTON_BACK}
+	var btn := {"jump": JOY_BUTTON_A, "use": JOY_BUTTON_X, "reload": JOY_BUTTON_Y, "pad_crouch": JOY_BUTTON_B,
+		"sprint": JOY_BUTTON_LEFT_STICK, "pause": JOY_BUTTON_START, "map": JOY_BUTTON_BACK,
+		"breath": JOY_BUTTON_LEFT_SHOULDER, "next_gun": JOY_BUTTON_RIGHT_SHOULDER, "pad_mod": JOY_BUTTON_LEFT_SHOULDER,
+		"binos": JOY_BUTTON_DPAD_UP, "flash": JOY_BUTTON_DPAD_DOWN, "caller": JOY_BUTTON_DPAD_LEFT, "scent": JOY_BUTTON_DPAD_RIGHT,
+		"thermal": JOY_BUTTON_RIGHT_STICK}
 	for a in btn.keys():
+		if not InputMap.has_action(a):
+			InputMap.add_action(a)
 		var jb := InputEventJoypadButton.new()
 		jb.button_index = btn[a]
 		InputMap.action_add_event(a, jb)
+	var nk := InputEventKey.new()
+	nk.physical_keycode = KEY_X
+	InputMap.action_add_event("next_gun", nk)
+
+
+## Was the last thing pressed on a controller? (for the button hints)
+var using_pad := false
+
+
+func _input(e: InputEvent) -> void:
+	if e is InputEventJoypadButton or e is InputEventJoypadMotion and absf((e as InputEventJoypadMotion).axis_value) > 0.4:
+		using_pad = true
+	elif e is InputEventKey or e is InputEventMouseButton or e is InputEventMouseMotion and (e as InputEventMouseMotion).relative.length() > 2.0:
+		using_pad = false
+
+
+## The right button name for the device in use.
+func key(action: String) -> String:
+	var pad := {"use": "X", "reload": "Y", "jump": "A", "pause": "START", "map": "BACK", "binos": "D-UP", "caller": "D-LEFT",
+		"scent": "D-RIGHT", "flash": "D-DOWN", "thermal": "R3", "breath": "LB", "next_gun": "RB", "aim": "LT", "fire": "RT",
+		"cloak": "LB+B", "drone": "LB+A", "crouch": "B", "sprint": "L3", "journal": "BACK", "help": "BACK"}
+	var kb := {"use": "E", "reload": "R", "jump": "SPACE", "pause": "ESC", "map": "M", "binos": "B", "caller": "Q", "scent": "V",
+		"flash": "F", "thermal": "T", "breath": "SHIFT", "next_gun": "X", "aim": "RMB", "fire": "LMB", "cloak": "C", "drone": "G",
+		"crouch": "CTRL", "sprint": "SHIFT", "journal": "J", "help": "F1"}
+	return String((pad if using_pad else kb).get(action, action.to_upper()))
+
+
+func rumble(weak: float, strong: float, t: float) -> void:
+	if using_pad and Settings.rumble:
+		for d in Input.get_connected_joypads():
+			Input.start_joy_vibration(d, weak, strong, t)

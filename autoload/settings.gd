@@ -14,6 +14,8 @@ var invert_y := false
 var render_scale := 1.0
 var vsync := true
 var killcam := true
+var rumble := true
+var pad_sens := 2.6
 
 
 func _ready() -> void:
@@ -27,6 +29,8 @@ func _ready() -> void:
 		render_scale = float(cf.get_value("gfx", "scale", 1.0))
 		vsync = bool(cf.get_value("gfx", "vsync", true))
 		killcam = bool(cf.get_value("game", "killcam", true))
+		rumble = bool(cf.get_value("input", "rumble", true))
+		pad_sens = float(cf.get_value("input", "pad_sens", pad_sens))
 	else:
 		preset = -1
 	if preset < 0:
@@ -61,6 +65,8 @@ func save() -> void:
 	cf.set_value("input", "invert_y", invert_y)
 	cf.set_value("audio", "volume", volume)
 	cf.set_value("game", "killcam", killcam)
+	cf.set_value("input", "rumble", rumble)
+	cf.set_value("input", "pad_sens", pad_sens)
 	cf.save(FILE)
 
 

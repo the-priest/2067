@@ -73,12 +73,12 @@ func _ready() -> void:
 		if world.get_node_or_null("KillCam") != null:
 			break
 	print("killcam: ", world.get_node_or_null("KillCam") != null, " organ ", kc.last_organ)
-	var t0 := Time.get_ticks_msec()
+	var tk := Time.get_ticks_msec()
 	await get_tree().create_timer(0.03, true, false, true).timeout
-	while Time.get_ticks_msec() - t0 < 900:
+	while Time.get_ticks_msec() - tk < 900:
 		await get_tree().process_frame
 	await _shot2("09_killcam_ride")
-	while Time.get_ticks_msec() - t0 < 2600:
+	while Time.get_ticks_msec() - tk < 2600:
 		await get_tree().process_frame
 	await _shot2("10_killcam_orbit")
 	print("SHOTS DONE")

@@ -42,6 +42,26 @@ func setup(w: Node) -> void:
 	if world != null and world.has_method("push_ui"):
 		world.push_ui(self)
 	build()
+	focus_first.call_deferred()
+
+
+## Controllers: put focus on the first button so the d-pad and A work.
+func focus_first() -> void:
+	var b := _first_button(self)
+	if b != null:
+		b.grab_focus()
+
+
+func _first_button(n: Node) -> Control:
+	for c in n.get_children():
+		if c is BaseButton and (c as BaseButton).visible and not (c as BaseButton).disabled and (c as Control).focus_mode != Control.FOCUS_NONE and (c as BaseButton).text != "CLOSE  [Esc]":
+			return c
+		if c is Slider or c is OptionButton:
+			return c
+		var r := _first_button(c)
+		if r != null:
+			return r
+	return null
 
 
 func panel_size() -> Vector2:
@@ -63,7 +83,7 @@ func close() -> void:
 
 
 func _unhandled_input(e: InputEvent) -> void:
-	if e.is_action_pressed("pause"):
+	if e.is_action_pressed("pause") or e.is_action_pressed("ui_cancel"):
 		close()
 		get_viewport().set_input_as_handled()
 

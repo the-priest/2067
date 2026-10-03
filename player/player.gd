@@ -55,6 +55,7 @@ var _caller_cd := 0.0
 var _heart_sfx := 0.0
 var _vitals_shown: Creature = null
 var _reload_count := 0
+var _pad_crouch := false
 
 
 func _ready() -> void:
@@ -131,6 +132,24 @@ func _unhandled_input(e: InputEvent) -> void:
 			zoom_i = maxi(zoom_i - 1, 0)
 	if e.is_action_pressed("reload"):
 		_start_reload()
+	if e.is_action_pressed("next_gun") and not Game.weapons.is_empty():
+		binos = false
+		var i := (Game.weapons.find(gun_kind) + 1) % Game.weapons.size()
+		equip(Game.weapons[i])
+	# Pad: LB held changes what B and A do (cloak, drone), and the d-pad
+	# zooms while you're on the scope.
+	if e is InputEventJoypadButton and (e as InputEventJoypadButton).pressed:
+		var jb := (e as InputEventJoypadButton).button_index
+		if Input.is_action_pressed("pad_mod") and jb == JOY_BUTTON_B and Game.has("cloak"):
+			cloak_on = not cloak_on and cloak_energy > 10.0
+			world.set_cloak(cloak_on)
+		elif Input.is_action_pressed("pad_mod") and jb == JOY_BUTTON_A and Game.has("drone"):
+			world.toggle_drone()
+		elif scoped and not binos and jb in [JOY_BUTTON_DPAD_UP, JOY_BUTTON_DPAD_DOWN]:
+			var zz: Array = weapon().get("zoom", [])
+			zoom_i = clampi(zoom_i + (1 if jb == JOY_BUTTON_DPAD_UP else -1), 0, maxi(zz.size() - 1, 0))
+			get_viewport().set_input_as_handled()
+			return
 	if e.is_action_pressed("flash"):
 		light.visible = not light.visible
 		Sfx.play("click", -10.0)
@@ -178,7 +197,11 @@ func _physics_process(dt: float) -> void:
 		move_and_slide()
 		return
 	var input := Input.get_vector("left", "right", "fwd", "back")
-	crouched = Input.is_action_pressed("crouch")
+	if Input.is_action_just_pressed("pad_crouch") and not Input.is_action_pressed("pad_mod"):
+		_pad_crouch = not _pad_crouch
+	if Input.is_action_pressed("crouch"):
+		_pad_crouch = false
+	crouched = Input.is_action_pressed("crouch") or _pad_crouch
 	var want_sprint := Input.is_action_pressed("sprint") and input.y < -0.2 and not crouched and aiming < 0.3 and stamina > 5.0
 	_sprinting = want_sprint
 	var spd := SPRINT if want_sprint else (CROUCH if crouched else WALK)
@@ -268,6 +291,17 @@ func _process(dt: float) -> void:
 			Game.say("The cloak's out of charge.")
 	else:
 		cloak_energy = minf(100.0, cloak_energy + dt * 2.0)
+	# Right stick: look, with a response curve, slower on the glass, and a
+	# touch of friction over an animal (the "easier" part).
+	if not ui:
+		var lv := Input.get_vector("look_left", "look_right", "look_up", "look_down")
+		if lv.length() > 0.0:
+			var curve := lv * pow(lv.length(), 0.8)
+			var spd := Settings.pad_sens * (cam.fov / Settings.fov)
+			if aim_creature != null and aiming > 0.5:
+				spd *= 0.55
+			_yaw -= curve.x * spd * dt
+			_pitch = clampf(_pitch - curve.y * spd * dt * 0.8 * (-1.0 if Settings.invert_y else 1.0), -1.5, 1.5)
 	# Sway: breathing, tiredness, movement. Steady when you hold it.
 	var t := Time.get_ticks_msec() / 1000.0
 	var tired := 1.0 + (100.0 - stamina) / 40.0
@@ -342,6 +376,7 @@ func _fire() -> void:
 	_kick += Vector2(randf_range(-0.3, 0.3) * kick, kick)
 	_pitch += kick * 0.4
 	Sfx.play(String(w["sound"]), 0.0 if String(w["sound"]) != "coil" else -4.0, randf_range(0.95, 1.05))
+	Game.rumble(0.4, kick * 12.0, 0.18)
 	world.muzzle_flash(gun.get_node("Muzzle").global_position if gun.has_node("Muzzle") else origin, w)
 	world.noise(global_position, float(w["noise"]), "shot")
 	Game.stat("shots")
@@ -529,6 +564,7 @@ func hurt(dmg: float, from: Vector3) -> void:
 		return
 	health -= dmg
 	hurt_flash = 0.6
+	Game.rumble(0.8, 1.0, 0.4)
 	var push := (global_position - from)
 	push.y = 0.0
 	velocity += push.normalized() * 6.0 + Vector3(0, 3.0, 0)

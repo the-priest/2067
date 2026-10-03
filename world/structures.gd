@@ -21,6 +21,7 @@ var pods: Array = [] # Vector3
 var windmill: Node3D
 var mothership := Vector3.ZERO
 var avoid: Array = [] # Vector3(x, z, r): keep trees off these
+var camps: Array = [] # [name, Vector3]
 
 
 func setup(w: Node, t: Terrain) -> void:
@@ -74,6 +75,7 @@ func build_all(sd: int) -> void:
 	_pods(rng)
 	_ruins(rng)
 	_road()
+	_camps()
 	_commit()
 
 
@@ -586,3 +588,56 @@ func _road() -> void:
 					var top := Vector3(pp.x, ph, pp.y) + lean * 8.0
 					(kits["wood"] as MeshKit).cyl(Vector3(pp.x, ph - 0.5, pp.y), top, 0.14, 0.11, 6, Color(0.3, 0.24, 0.18))
 					(kits["wood"] as MeshKit).box(top - lean * 0.5, Vector3(2.2, 0.12, 0.12), Color(0.3, 0.24, 0.18))
+
+
+## Hunting camps: a tent, a fire, a flag on a pole. Find one and you can
+## fast travel back to it from the map.
+const CAMPS := [
+	["Deadwood Camp", Vector2(-560, -120), "forest"],
+	["Lakeside Camp", Vector2(-400, 620), "marsh"],
+	["Mesa Camp", Vector2(560, 360), "scrub"],
+	["Ridge Camp", Vector2(-80, -620), "ridges"],
+	["Crater Rim Camp", Vector2(300, -260), "basin"],
+	["South Fields Camp", Vector2(180, 560), "fields"],
+]
+
+
+func _camps() -> void:
+	for c in CAMPS:
+		var at: Vector2 = c[1]
+		# Find flat ground near the planned spot.
+		var best := Vector3(at.x, terrain.height_at(at.x, at.y), at.y)
+		var bn := terrain.normal_at(at.x, at.y).y
+		for i in 24:
+			var a := float(i) / 24.0 * TAU
+			var r := 8.0 + float(i % 3) * 14.0
+			var q := Vector2(at.x + cos(a) * r, at.y + sin(a) * r)
+			var n := terrain.normal_at(q.x, q.y).y
+			if n > bn and terrain.height_at(q.x, q.y) > 1.0:
+				bn = n
+				best = Vector3(q.x, terrain.height_at(q.x, q.y), q.y)
+		camps.append([c[0], best])
+		avoid.append(Vector3(best.x, best.z, 12.0))
+		var o := best
+		# Tent: a ridge pole and two sloped canvas sides.
+		var canvas := Color(0.45, 0.42, 0.3)
+		var k: MeshKit = kits["wood"]
+		for sd: float in [-1.0, 1.0]:
+			k.quad(o + Vector3(-1.4 * sd, 0.0, -1.6), o + Vector3(-1.4 * sd, 0.0, 1.6), o + Vector3(0, 1.7, 1.6), o + Vector3(0, 1.7, -1.6), canvas, true)
+		k.cyl(o + Vector3(0, 1.7, -1.8), o + Vector3(0, 1.7, 1.8), 0.03, 0.03, 5, Color(0.3, 0.24, 0.18))
+		# Fire pit and logs.
+		var fp := o + Vector3(3.0, 0, 1.0)
+		for j in 7:
+			var a2 := TAU * j / 7.0
+			(kits["stone"] as MeshKit).blob(fp + Vector3(cos(a2) * 0.6, 0.08, sin(a2) * 0.6), Vector3(0.18, 0.12, 0.16), Color(0.3, 0.29, 0.27), 4, 6, 0.3, j)
+		(kits["lamp"] as MeshKit).blob(fp + Vector3(0, 0.15, 0), Vector3(0.3, 0.2, 0.3), Color(1.0, 0.5, 0.15), 5, 7, 0.4, 3)
+		var lt := OmniLight3D.new()
+		lt.light_color = Color(1.0, 0.6, 0.25)
+		lt.light_energy = 2.0
+		lt.omni_range = 12.0
+		add_child(lt)
+		lt.global_position = fp + Vector3(0, 0.8, 0)
+		k.cyl(o + Vector3(-2.5, 0, -2.0), o + Vector3(-2.5, 4.5, -2.0), 0.04, 0.03, 5, Color(0.3, 0.24, 0.18))
+		k.quad(o + Vector3(-2.5, 4.4, -2.0), o + Vector3(-1.5, 4.2, -2.0), o + Vector3(-1.5, 3.7, -2.0), o + Vector3(-2.5, 3.8, -2.0), Color(0.7, 0.25, 0.1), true)
+		var nm: String = c[0]
+		Interactable.make(world, fp + Vector3(0, 0.6, 0), "Rest at %s: fast travel" % nm, func(_p: Node) -> void: world.open_travel(), 3.0)

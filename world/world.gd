@@ -141,6 +141,7 @@ func _process(dt: float) -> void:
 		_manage_herds()
 	_night_packs(dt)
 	_story(dt)
+	_discover()
 	if drone != null:
 		_drone_tick(dt)
 
@@ -867,3 +868,53 @@ func _story(dt: float) -> void:
 		Game.journal("Mae: " + String(entry["msg"]).substr(0, 80) + "...")
 		Sfx.play("scanner", -4.0, 0.8)
 		Game.changed.emit()
+
+
+
+# ---------------------------------------------------------------- camps
+
+func _discover() -> void:
+	if Engine.get_process_frames() % 30 != 0:
+		return
+	var pp := player.global_position
+	for c in structures.camps:
+		var nm: String = c[0]
+		if not Game.camps.has(nm) and pp.distance_to(c[1]) < 45.0:
+			Game.camps[nm] = true
+			Game.say("Discovered %s. You can fast travel here from the map." % nm, UIStyle.TEAL)
+			Game.journal("Found %s." % nm)
+			Game.add_xp(20)
+			Sfx.play("rank", -10.0, 1.3)
+
+
+func open_travel() -> void:
+	var m: Node = load("res://ui/map.gd").new()
+	m.name = "Map"
+	m.call("setup", self)
+	hud.add_child(m)
+
+
+## Every place you can fast travel to: the farm, and the camps you've found.
+func travel_spots() -> Array:
+	var out: Array = [["Your Farm", structures.farm_spawn]]
+	for c in structures.camps:
+		if Game.camps.has(c[0]):
+			out.append([c[0], (c[1] as Vector3) + Vector3(3.0, 0.3, -2.0)])
+	return out
+
+
+func can_travel() -> String:
+	for c in creatures:
+		if is_instance_valid(c) and (c as Creature).state == Creature.S.CHARGE and (c as Creature).global_position.distance_to(player.global_position) < 120.0:
+			return "Something's coming for you. Deal with it first."
+	return ""
+
+
+func travel_to(at: Vector3) -> void:
+	if hud != null:
+		hud.call("fade")
+	player.global_position = at + Vector3(0, 0.5, 0)
+	player.velocity = Vector3.ZERO
+	Game.time_of_day = fmod(Game.time_of_day + 0.5, 24.0)
+	terrain.build_lod_now(at)
+	Sfx.play("step", -6.0)
