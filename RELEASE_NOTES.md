@@ -1,6 +1,6 @@
 # 2067: Hornfall 0.1.0 beta
 
-The first playable build. Download the zip for your system, unzip, and run
+The first playable build of the hunt. Download the zip for your system, unzip, and run
 `2067.exe` (Windows) or `2067.x86_64` (Linux). Saves go in your user folder.
 
 ## What's in it
