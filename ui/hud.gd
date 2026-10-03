@@ -269,6 +269,12 @@ func record_banner(kind: String, sp_name: String, score: float, cls: String) -> 
 	Sfx.play("rank", -2.0)
 
 
+func blink_flash() -> void:
+	fade_rect.color = Color(0.4, 1.0, 0.9, 0.45)
+	var tw := create_tween()
+	tw.tween_property(fade_rect, "color:a", 0.0, 0.45)
+
+
 func radio_alert(t: String) -> void:
 	banner.text = t
 	banner.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
@@ -318,7 +324,7 @@ func _process(dt: float) -> void:
 		ammo_lbl.text = "%d  /  %d" % [int(Game.mag.get(p.gun_kind, 0)), int(Game.ammo.get(a, 0))]
 		if p.reloading > 0.0:
 			ammo_lbl.text = "RELOADING"
-	var hints := ["%s glass" % Game.key("binos"), "%s reload" % Game.key("reload"), "%s next gun" % Game.key("next_gun")]
+	var hints := ["%s blink%s" % [Game.key("blink"), (" %.0fs" % ceil(p.blink_cool)) if p.blink_cool > 0.0 else ""], "%s glass" % Game.key("binos"), "%s reload" % Game.key("reload"), "%s next gun" % Game.key("next_gun")]
 	if Game.has("caller"):
 		hints.append("%s caller" % Game.key("caller"))
 	if Game.has("scent"):
@@ -334,7 +340,16 @@ func _process(dt: float) -> void:
 	hint_lbl.text = "  ".join(hints)
 	# Prompt.
 	var it: Object = p.interact_target
-	if it != null and not world.ui_open():
+	if p.blink_state == 1:
+		prompt.text = "%s  %s blink   ·   %s cancel   ·   %d m" % ["READY" if p.blink_ok else "CAN'T BLINK THERE", Game.key("blink"), Game.key("cancel"), int(p.global_position.distance_to(p.blink_target))]
+		prompt.add_theme_color_override("font_color", UIStyle.TEAL if p.blink_ok else UIStyle.BAD)
+		hold_bar.visible = false
+		it = null
+	else:
+		prompt.add_theme_color_override("font_color", UIStyle.BONE)
+	if p.blink_state == 1:
+		pass
+	elif it != null and not world.ui_open():
 		prompt.text = "[%s] %s" % [Game.key("use"), String(it.call("interact_text"))]
 		var hold: float = it.call("interact_hold")
 		hold_bar.visible = hold > 0.0 and p.harvest_t > 0.0
@@ -393,9 +408,13 @@ func _unhandled_input(e: InputEvent) -> void:
 		return
 	if world.ui_open():
 		return
+	if world.player.blink_state == 1 and (e.is_action_pressed("pause") or e.is_action_pressed("ui_cancel")):
+		world.player.cancel_blink()
+		get_viewport().set_input_as_handled()
+		return
 	if e.is_action_pressed("pause"):
 		_open_panel(load("res://ui/pause.gd").new())
-	elif e.is_action_pressed("map"):
+	elif e.is_action_pressed("map") or e.is_action_pressed("map_tp"):
 		_open_panel(load("res://ui/map.gd").new())
 	elif e.is_action_pressed("journal") or e.is_action_pressed("inv"):
 		_open_panel(load("res://ui/journal.gd").new())

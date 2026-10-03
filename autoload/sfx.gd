@@ -136,6 +136,7 @@ func _make_all() -> void:
 	bank["thud"] = _impact(0.25, 50.0)
 	bank["scanner"] = _beep()
 	bank["roar"] = _roar()
+	bank["blink"] = _blink()
 	bank["trumpet"] = _trumpet()
 
 
@@ -527,4 +528,22 @@ func _trumpet() -> AudioStreamWAV:
 		var saw := fmod(ph / TAU, 1.0) * 2.0 - 1.0
 		var env := minf(1.0, t * 10.0) * (1.0 - smoothstep(0.75, 1.0, u))
 		b[i] = (saw * 0.6 + sin(ph * 2.0) * 0.25 + randf_range(-1.0, 1.0) * 0.12) * env
+	return _wav(b)
+
+
+
+## The blink: a rising shimmer, a soft pop, the air rushing back in.
+func _blink() -> AudioStreamWAV:
+	var b := _buf(0.9)
+	var ph := 0.0
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var f := 200.0 + 1800.0 * pow(minf(t / 0.35, 1.0), 2.0)
+		ph += TAU * f / RATE
+		lp += (randf_range(-1.0, 1.0) - lp) * 0.2
+		var rise := sin(ph) * 0.35 * smoothstep(0.0, 0.3, t) * (1.0 - smoothstep(0.32, 0.4, t))
+		var pop := sin(TAU * 90.0 * maxf(0.0, t - 0.36)) * exp(-maxf(0.0, t - 0.36) * 22.0) * float(t > 0.36)
+		var rush := lp * exp(-maxf(0.0, t - 0.38) * 5.0) * float(t > 0.38) * 0.8
+		b[i] = rise + pop * 0.9 + rush
 	return _wav(b)

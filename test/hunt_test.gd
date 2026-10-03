@@ -51,6 +51,7 @@ func _ready() -> void:
 	await _spotting()
 	await _shop()
 	await _sights()
+	await _blink()
 	await _farm_defense()
 	_save_load()
 	print("HUNT TEST DONE fails=%d" % fails)
@@ -246,6 +247,31 @@ func _sights() -> void:
 	await _pic("ads_scope")
 	Input.action_release("aim")
 	await _frames(20)
+
+
+func _blink() -> void:
+	print("PHASE blink")
+	var p := world.player
+	p.cam.top_level = false
+	p.cam.transform = Transform3D.IDENTITY
+	p.look_dir(0.0, -0.12)
+	p.pivot.rotation = Vector3(-0.12, 0, 0)
+	var from := p.global_position
+	p.start_blink()
+	for i in 5:
+		await get_tree().process_frame
+	_ok("R1 shows the blink target (%d m)" % int(from.distance_to(p.blink_target)), p.blink_state == 1 and p._blink_marker.visible)
+	p.cancel_blink()
+	_ok("Circle cancels it", p.blink_state == 0 and not p._blink_marker.visible)
+	p.start_blink()
+	for i in 5:
+		await get_tree().process_frame
+	var target := p.blink_target
+	var ok := p.blink_ok
+	p.confirm_blink()
+	await get_tree().process_frame
+	_ok("R1 again blinks you there (moved %d m)" % int(from.distance_to(p.global_position)), not ok or p.global_position.distance_to(target) < 1.0)
+	_ok("and it has to recharge", p.blink_cool > 0.0 or not ok)
 
 
 func _farm_defense() -> void:

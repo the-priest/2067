@@ -17,7 +17,7 @@ func panel_size() -> Vector2:
 func build() -> void:
 	money = UIStyle.label("", 20, Color(1.0, 0.85, 0.45), UIStyle.bold())
 	box.add_child(money)
-	box.add_child(UIStyle.label("LB / RB: switch tabs" if Game.using_pad else "X: next tab", 13, UIStyle.DIM))
+	box.add_child(UIStyle.label("L1 / R1: switch tabs" if Game.using_pad else "X: next tab", 13, UIStyle.DIM))
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(tabs)
@@ -37,7 +37,7 @@ func close() -> void:
 
 
 func _unhandled_input(e: InputEvent) -> void:
-	if e.is_action_pressed("next_gun"):
+	if e.is_action_pressed("next_gun") or e.is_action_pressed("blink"):
 		tabs.current_tab = (tabs.current_tab + 1) % tabs.get_tab_count()
 		focus_first.call_deferred()
 		get_viewport().set_input_as_handled()

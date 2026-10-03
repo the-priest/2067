@@ -56,6 +56,17 @@ var _heart_sfx := 0.0
 var _vitals_shown: Creature = null
 var _reload_count := 0
 var _pad_crouch := false
+var _y_held := 0.0
+var _y_fired := false
+# The blink: Xhuul tech in a farmer's hands. R1 to aim, R1 to go, Circle to cancel.
+const BLINK_RANGE := 200.0
+const BLINK_COOL := 3.0
+var blink_state := 0 # 0 idle, 1 aiming
+var blink_target := Vector3.ZERO
+var blink_ok := false
+var blink_cool := 0.0
+var _blink_marker: Node3D = null
+var _blink_arc: MeshInstance3D = null
 
 
 func _ready() -> void:
@@ -132,6 +143,13 @@ func _unhandled_input(e: InputEvent) -> void:
 			zoom_i = maxi(zoom_i - 1, 0)
 	if e.is_action_pressed("reload"):
 		_start_reload()
+	if e.is_action_pressed("blink") and not in_drone:
+		if blink_state == 0:
+			start_blink()
+		else:
+			confirm_blink()
+		get_viewport().set_input_as_handled()
+		return
 	if e.is_action_pressed("next_gun") and not Game.weapons.is_empty():
 		binos = false
 		var i := (Game.weapons.find(gun_kind) + 1) % Game.weapons.size()
@@ -197,7 +215,9 @@ func _physics_process(dt: float) -> void:
 		move_and_slide()
 		return
 	var input := Input.get_vector("left", "right", "fwd", "back")
-	if Input.is_action_just_pressed("pad_crouch") and not Input.is_action_pressed("pad_mod"):
+	if Input.is_action_just_pressed("pad_crouch") and blink_state == 1:
+		cancel_blink()
+	elif Input.is_action_just_pressed("pad_crouch") and not Input.is_action_pressed("pad_mod"):
 		_pad_crouch = not _pad_crouch
 	if Input.is_action_pressed("crouch"):
 		_pad_crouch = false
@@ -322,6 +342,8 @@ func _process(dt: float) -> void:
 	_view_model(dt)
 	_fire_input()
 	_reload_tick(dt)
+	_pad_y(dt)
+	_blink_tick(dt)
 	_look_at_things(dt)
 	_interact_tick(dt)
 
@@ -578,3 +600,158 @@ func look_dir(yaw: float, pitch: float) -> void:
 	_yaw = yaw
 	_pitch = pitch
 	rotation.y = yaw
+
+
+
+## Triangle: tap to reload, hold to switch guns.
+func _pad_y(dt: float) -> void:
+	if Input.is_action_pressed("pad_y"):
+		_y_held += dt
+		if _y_held >= 0.35 and not _y_fired:
+			_y_fired = true
+			if not Game.weapons.is_empty():
+				binos = false
+				equip(Game.weapons[(Game.weapons.find(gun_kind) + 1) % Game.weapons.size()])
+	else:
+		if _y_held > 0.0 and not _y_fired:
+			_start_reload()
+		_y_held = 0.0
+		_y_fired = false
+
+
+# ---------------------------------------------------------------- the blink
+
+func start_blink() -> void:
+	if blink_cool > 0.0:
+		Game.say("Blink recharging (%.1fs)" % blink_cool, Color(0.6, 0.9, 1.0))
+		Sfx.play("click", -8.0)
+		return
+	blink_state = 1
+	Sfx.play("scanner", -6.0, 0.7)
+	if _blink_marker == null:
+		_make_blink_marker()
+	_blink_marker.visible = true
+	_blink_arc.visible = true
+
+
+func cancel_blink() -> void:
+	blink_state = 0
+	if _blink_marker != null:
+		_blink_marker.visible = false
+		_blink_arc.visible = false
+	Sfx.play("click", -8.0, 0.7)
+
+
+func confirm_blink() -> void:
+	if not blink_ok:
+		Sfx.play("click", -4.0, 0.5)
+		Game.say("Can't blink there.", Color(1.0, 0.5, 0.4))
+		return
+	var from := global_position
+	blink_state = 0
+	_blink_marker.visible = false
+	_blink_arc.visible = false
+	global_position = blink_target + Vector3(0, 0.15, 0)
+	velocity = Vector3.ZERO
+	blink_cool = BLINK_COOL
+	world.terrain.build_lod_now(global_position)
+	world.blinked(from, global_position)
+	cam.fov = Settings.fov * 1.25
+	hurt_flash = 0.0
+	Game.rumble(0.5, 0.3, 0.25)
+	Game.stat("blinks")
+
+
+func _blink_tick(dt: float) -> void:
+	blink_cool = maxf(0.0, blink_cool - dt)
+	if blink_state != 1:
+		return
+	var space := get_world_3d().direct_space_state
+	var from := cam.global_position
+	var dir := -cam.global_transform.basis.z
+	var q := PhysicsRayQueryParameters3D.create(from, from + dir * BLINK_RANGE, 1)
+	q.exclude = [get_rid()]
+	var hit := space.intersect_ray(q)
+	var p: Vector3
+	blink_ok = false
+	if hit.is_empty():
+		# Nothing in range: drop to the ground at full range.
+		p = from + dir * BLINK_RANGE
+		p.y = world.terrain.height_at(p.x, p.z)
+	else:
+		p = hit["position"]
+		var n: Vector3 = hit["normal"]
+		if n.y < 0.6:
+			# A wall or a cliff: land at its foot, on your side of it.
+			p -= dir * 1.0
+			p.y = world.terrain.height_at(p.x, p.z)
+	var d := global_position.distance_to(p)
+	blink_ok = d <= BLINK_RANGE + 2.0 and d > 3.0 and p.y > Terrain.WATER + 0.3 and world.terrain.in_bounds(p.x, p.z, 70.0)
+	blink_target = p
+	_blink_marker.global_position = p + Vector3(0, 0.05, 0)
+	var col := Color(0.35, 1.0, 0.9) if blink_ok else Color(1.0, 0.35, 0.3)
+	(_blink_marker.get_meta("mat") as StandardMaterial3D).albedo_color = Color(col.r, col.g, col.b, 0.55)
+	(_blink_marker.get_meta("mat") as StandardMaterial3D).emission = col
+	var t := Time.get_ticks_msec() / 1000.0
+	_blink_marker.scale = Vector3.ONE * (1.0 + sin(t * 6.0) * 0.08)
+	_blink_marker.rotation.y = t * 1.5
+	# The arc from your hands to the mark.
+	var k := MeshKit.new()
+	var a := global_position + Vector3(0, 1.2, 0)
+	var h := clampf(d * 0.18, 2.0, 25.0)
+	var prev := a
+	for i in range(1, 25):
+		var u := float(i) / 24.0
+		var pt := a.lerp(p, u) + Vector3(0, sin(u * PI) * h, 0)
+		if i % 2 == 0:
+			k.cyl(prev, pt, 0.04, 0.04, 4, col, false)
+		prev = pt
+	_blink_arc.mesh = k.commit()
+	_blink_arc.global_transform = Transform3D.IDENTITY
+
+
+func _make_blink_marker() -> void:
+	_blink_marker = Node3D.new()
+	world.add_child(_blink_marker)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.emission_enabled = true
+	mat.emission = Color(0.35, 1.0, 0.9)
+	mat.emission_energy_multiplier = 3.0
+	mat.albedo_color = Color(0.35, 1.0, 0.9, 0.55)
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.no_depth_test = false
+	_blink_marker.set_meta("mat", mat)
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.9
+	tm.outer_radius = 1.05
+	tm.rings = 32
+	ring.mesh = tm
+	ring.material_override = mat
+	_blink_marker.add_child(ring)
+	var ring2 := MeshInstance3D.new()
+	var tm2 := TorusMesh.new()
+	tm2.inner_radius = 0.35
+	tm2.outer_radius = 0.42
+	ring2.mesh = tm2
+	ring2.material_override = mat
+	_blink_marker.add_child(ring2)
+	var beam := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.02
+	cm.bottom_radius = 0.3
+	cm.height = 6.0
+	beam.mesh = cm
+	beam.material_override = mat
+	beam.position.y = 3.0
+	_blink_marker.add_child(beam)
+	_blink_arc = MeshInstance3D.new()
+	_blink_arc.material_override = mat
+	_blink_arc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	world.add_child(_blink_arc)
+
+
+func blink_aiming() -> bool:
+	return blink_state == 1

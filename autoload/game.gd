@@ -482,9 +482,9 @@ func _inputs() -> void:
 		ja.axis = axes[a][0]
 		ja.axis_value = axes[a][1]
 		InputMap.action_add_event(a, ja)
-	var btn := {"jump": JOY_BUTTON_A, "use": JOY_BUTTON_X, "reload": JOY_BUTTON_Y, "pad_crouch": JOY_BUTTON_B,
-		"sprint": JOY_BUTTON_LEFT_STICK, "pause": JOY_BUTTON_START, "map": JOY_BUTTON_BACK,
-		"breath": JOY_BUTTON_LEFT_SHOULDER, "next_gun": JOY_BUTTON_RIGHT_SHOULDER, "pad_mod": JOY_BUTTON_LEFT_SHOULDER,
+	var btn := {"jump": JOY_BUTTON_A, "use": JOY_BUTTON_X, "pad_y": JOY_BUTTON_Y, "pad_crouch": JOY_BUTTON_B,
+		"sprint": JOY_BUTTON_LEFT_STICK, "pause": JOY_BUTTON_START, "map": JOY_BUTTON_BACK, "map_tp": JOY_BUTTON_TOUCHPAD,
+		"breath": JOY_BUTTON_LEFT_SHOULDER, "blink": JOY_BUTTON_RIGHT_SHOULDER, "pad_mod": JOY_BUTTON_LEFT_SHOULDER,
 		"binos": JOY_BUTTON_DPAD_UP, "flash": JOY_BUTTON_DPAD_DOWN, "caller": JOY_BUTTON_DPAD_LEFT, "scent": JOY_BUTTON_DPAD_RIGHT,
 		"thermal": JOY_BUTTON_RIGHT_STICK}
 	for a in btn.keys():
@@ -495,7 +495,15 @@ func _inputs() -> void:
 		InputMap.action_add_event(a, jb)
 	var nk := InputEventKey.new()
 	nk.physical_keycode = KEY_X
+	if not InputMap.has_action("next_gun"):
+		InputMap.add_action("next_gun")
 	InputMap.action_add_event("next_gun", nk)
+	var bk := InputEventKey.new()
+	bk.physical_keycode = KEY_H
+	InputMap.action_add_event("blink", bk)
+	var bm := InputEventMouseButton.new()
+	bm.button_index = MOUSE_BUTTON_XBUTTON1
+	InputMap.action_add_event("blink", bm)
 	# Menus: A selects, B backs out, d-pad and left stick move everywhere.
 	var ui := {"ui_accept": [JOY_BUTTON_A], "ui_cancel": [JOY_BUTTON_B], "ui_up": [JOY_BUTTON_DPAD_UP],
 		"ui_down": [JOY_BUTTON_DPAD_DOWN], "ui_left": [JOY_BUTTON_DPAD_LEFT], "ui_right": [JOY_BUTTON_DPAD_RIGHT]}
@@ -535,12 +543,13 @@ func _input(e: InputEvent) -> void:
 
 ## The right button name for the device in use.
 func key(action: String) -> String:
-	var pad := {"use": "X", "reload": "Y", "jump": "A", "pause": "START", "map": "BACK", "binos": "D-UP", "caller": "D-LEFT",
-		"scent": "D-RIGHT", "flash": "D-DOWN", "thermal": "R3", "breath": "LB", "next_gun": "RB", "aim": "LT", "fire": "RT",
-		"cloak": "LB+B", "drone": "LB+A", "crouch": "B", "sprint": "L3", "journal": "BACK", "help": "BACK"}
+	var pad := {"use": "SQUARE", "reload": "TRIANGLE", "jump": "CROSS", "pause": "OPTIONS", "map": "TOUCHPAD", "binos": "D-UP", "caller": "D-LEFT",
+		"scent": "D-RIGHT", "flash": "D-DOWN", "thermal": "R3", "breath": "L1", "next_gun": "hold TRIANGLE", "aim": "L2", "fire": "R2",
+		"cloak": "L1+CIRCLE", "drone": "L1+CROSS", "crouch": "CIRCLE", "sprint": "L3", "journal": "TOUCHPAD", "help": "TOUCHPAD",
+		"blink": "R1", "cancel": "CIRCLE"}
 	var kb := {"use": "E", "reload": "R", "jump": "SPACE", "pause": "ESC", "map": "M", "binos": "B", "caller": "Q", "scent": "V",
 		"flash": "F", "thermal": "T", "breath": "SHIFT", "next_gun": "X", "aim": "RMB", "fire": "LMB", "cloak": "C", "drone": "G",
-		"crouch": "CTRL", "sprint": "SHIFT", "journal": "J", "help": "F1"}
+		"crouch": "CTRL", "sprint": "SHIFT", "journal": "J", "help": "F1", "blink": "H", "cancel": "ESC"}
 	return String((pad if using_pad else kb).get(action, action.to_upper()))
 
 

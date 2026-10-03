@@ -1069,3 +1069,50 @@ func _dynamic_resolution(dt: float) -> void:
 		_fps_low = 0.0
 		if fps > 70.0 and vp.scaling_3d_scale < cap:
 			vp.scaling_3d_scale = minf(cap, vp.scaling_3d_scale + 0.04)
+
+
+
+## The player blinked: a flash where they left and where they landed, Dale
+## pops along behind, and anything close by hears it.
+func blinked(from: Vector3, to: Vector3) -> void:
+	Sfx.play("blink", -2.0)
+	for p in [from, to]:
+		var lt := OmniLight3D.new()
+		lt.light_color = Color(0.4, 1.0, 0.9)
+		lt.light_energy = 6.0
+		lt.omni_range = 12.0
+		add_child(lt)
+		lt.global_position = (p as Vector3) + Vector3(0, 1.2, 0)
+		var tw := lt.create_tween()
+		tw.tween_property(lt, "light_energy", 0.0, 0.6)
+		tw.tween_callback(lt.queue_free)
+		var burst := CPUParticles3D.new()
+		burst.one_shot = true
+		burst.emitting = true
+		burst.amount = 40
+		burst.lifetime = 0.8
+		burst.explosiveness = 1.0
+		burst.direction = Vector3.UP
+		burst.spread = 180.0
+		burst.initial_velocity_min = 1.0
+		burst.initial_velocity_max = 4.0
+		burst.gravity = Vector3(0, 1.0, 0)
+		var sm := SphereMesh.new()
+		sm.radius = 0.04
+		sm.height = 0.08
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.albedo_color = Color(0.5, 1.0, 0.95)
+		m.emission_enabled = true
+		m.emission = Color(0.4, 1.0, 0.9)
+		m.emission_energy_multiplier = 3.0
+		sm.material = m
+		burst.mesh = sm
+		add_child(burst)
+		burst.global_position = (p as Vector3) + Vector3(0, 1.0, 0)
+		get_tree().create_timer(1.2).timeout.connect(burst.queue_free)
+	if hud != null:
+		hud.call("blink_flash")
+	if companion != null and companion.follow:
+		companion.global_position = to + Basis(Vector3.UP, player.rotation.y) * Vector3(2.4, 0, 3.2)
+	noise(to, 30.0, "snap")
