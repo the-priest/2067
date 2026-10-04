@@ -102,7 +102,7 @@ func _process(delta: float) -> void:
 		if Game.time_of_day >= 24.0:
 			Game.time_of_day -= 24.0
 			Game.day += 1
-			Game.refresh_contracts()
+			Game.new_day()
 	tick(delta)
 
 

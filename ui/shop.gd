@@ -104,6 +104,14 @@ func _row(v: VBoxContainer, title: String, sub: String, right: String, buttons: 
 
 func _sell_tab() -> void:
 	var v := _tab("SELL")
+	var hot: Array = []
+	for k in Game.hot_species():
+		hot.append("%s x%.2f" % [Catalog.SPECIES[k]["name"], Game.market_mult(k)])
+	var cold: Array = []
+	for k in Game.market.keys():
+		if Game.market_mult(k) < 0.9:
+			cold.append("%s x%.2f" % [Catalog.SPECIES[k]["name"], Game.market_mult(k)])
+	v.add_child(UIStyle.label("TODAY ON THE EXCHANGE   ·   HOT: %s   ·   OUT OF FASHION: %s" % [", ".join(hot), ", ".join(cold)], 15, Color(1.0, 0.85, 0.45), UIStyle.bold()))
 	if Game.carried.is_empty():
 		v.add_child(UIStyle.label("You're not carrying anything. Hunt, then hold E over the carcass to harvest the hide and horns.", 18, UIStyle.DIM))
 		return

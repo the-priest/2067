@@ -261,6 +261,8 @@ func record_banner(kind: String, sp_name: String, score: float, cls: String) -> 
 			banner.text = "NEW ALL-TIME RECORD"
 		"species":
 			banner.text = "NEW %s RECORD" % sp_name.to_upper()
+		"alpha":
+			banner.text = "ALPHA DOWN: %s" % sp_name.to_upper()
 		_:
 			banner.text = "%s TROPHY" % cls
 	banner_sub.text = "%s  ·  %.1f  ·  %s" % [sp_name, score, cls]
@@ -581,6 +583,10 @@ func _draw_compass(sz: Vector2, p: Player) -> void:
 	# The farm on the compass.
 	var fp := Vector3(Terrain.FARM.x, 0, Terrain.FARM.y) - p.global_position
 	_compass_mark(sz, w, y, yaw, span, atan2(fp.x, -fp.z), Color(1.0, 0.8, 0.4), "HOME")
+	var apos: Vector3 = world.alpha_pos()
+	if apos != Vector3.INF:
+		var ad := apos - p.global_position
+		_compass_mark(sz, w, y, yaw, span, atan2(ad.x, -ad.z), Color(1.0, 0.75, 0.25), "ALPHA %dm" % int(ad.length()))
 	var sp2: Vector3 = world.structures.post_spot - p.global_position
 	_compass_mark(sz, w, y, yaw, span, atan2(sp2.x, -sp2.z), UIStyle.TEAL, "SHOP")
 	# The wind.

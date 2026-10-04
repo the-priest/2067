@@ -40,6 +40,11 @@ var xyla_talk := 0
 var records: Dictionary = {} # species -> {best, cls, count, total, day}
 var hall: Array = [] # the top horns ever taken, best first
 const HALL_SIZE := 15
+var market: Dictionary = {} # species -> price multiplier today
+var market_day := 0
+var alpha: Dictionary = {} # the named alpha that's out there, if any
+var alphas_taken: Array = []
+signal new_day_started
 
 
 func _ready() -> void:
@@ -120,12 +125,61 @@ func is_night() -> bool:
 ## Value of a trophy at the trader.
 func value_of(t: Dictionary) -> int:
 	var sp: Dictionary = Catalog.SPECIES[t["species"]]
+	var m := market_mult(t["species"])
+	if bool(t.get("alpha", false)):
+		m *= 2.0
 	if t["kind"] == "hide":
-		return int(round(float(sp["hide"]) * Catalog.hide_mult(float(t["quality"]))))
+		return int(round(float(sp["hide"]) * Catalog.hide_mult(float(t["quality"])) * m))
 	# Horns: by score, with a premium for the big classes.
 	var s := float(t["score"])
 	var mult := {"BRONZE": 1.0, "SILVER": 1.3, "GOLD": 1.8, "DIAMOND": 2.6, "MYTHIC": 4.0}
-	return int(round(s * float(sp["horn_value"]) * float(mult.get(t["class"], 1.0))))
+	return int(round(s * float(sp["horn_value"]) * float(mult.get(t["class"], 1.0)) * m))
+
+
+## The Exchange's prices move every day: the Xhuul are fickle. Two or three
+## species are hot (up to double), a couple are out of fashion.
+func roll_market() -> void:
+	market = {}
+	market_day = day
+	var keys: Array = Catalog.SPECIES.keys()
+	keys.shuffle()
+	for i in keys.size():
+		var k: String = keys[i]
+		var m := 1.0
+		if i < 3:
+			m = snappedf(randf_range(1.35, 2.0), 0.05)
+		elif i < 5:
+			m = snappedf(randf_range(0.6, 0.85), 0.05)
+		else:
+			m = snappedf(randf_range(0.9, 1.15), 0.05)
+		market[k] = m
+
+
+func market_mult(species: String) -> float:
+	if market_day != day or market.is_empty():
+		roll_market()
+	return float(market.get(species, 1.0))
+
+
+func hot_species() -> Array:
+	if market_day != day or market.is_empty():
+		roll_market()
+	var out: Array = []
+	for k in market.keys():
+		if float(market[k]) >= 1.3:
+			out.append(k)
+	return out
+
+
+## A new day: fresh contracts, a new market.
+func new_day() -> void:
+	refresh_contracts()
+	roll_market()
+	var hot: Array = []
+	for k in hot_species():
+		hot.append("%s x%.2f" % [Catalog.SPECIES[k]["name"], float(market[k])])
+	say("Day %d. The Exchange is paying top scrip for: %s" % [day, ", ".join(hot)], Color(1.0, 0.85, 0.45))
+	new_day_started.emit()
 
 
 func carry(t: Dictionary) -> bool:
@@ -373,6 +427,9 @@ func new_game() -> void:
 	xyla_talk = 0
 	records = {}
 	hall = []
+	alpha = {}
+	alphas_taken = []
+	roll_market()
 	refresh_contracts()
 	journal("Grandpa's rifle, thirty rounds, Dale, and an alien broker on the radio. Time to hunt.")
 
@@ -384,7 +441,7 @@ func save_game() -> void:
 		"contracts": contracts, "stats": stats, "log": log_entries, "day": day,
 		"time": time_of_day, "seed": seed_world, "story": story, "seen": seen_species,
 		"legend_down": legend_down, "camps": camps, "defense": defense, "wall_hp": wall_hp,
-		"next_raid": next_raid_day, "raids": raids_done, "xyla": xyla, "xyla_talk": xyla_talk, "records": records, "hall": hall, "pos": [player_pos.x, player_pos.y, player_pos.z],
+		"next_raid": next_raid_day, "raids": raids_done, "xyla": xyla, "xyla_talk": xyla_talk, "records": records, "hall": hall, "market": market, "market_day": market_day, "alpha": alpha, "alphas_taken": alphas_taken, "pos": [player_pos.x, player_pos.y, player_pos.z],
 	}
 	var f := FileAccess.open(SAVE, FileAccess.WRITE)
 	if f != null:
@@ -428,6 +485,10 @@ func load_game() -> bool:
 	xyla_talk = int(s.get("xyla_talk", 0))
 	records = s.get("records", {})
 	hall = s.get("hall", [])
+	market = s.get("market", {})
+	market_day = int(s.get("market_day", 0))
+	alpha = s.get("alpha", {})
+	alphas_taken = s.get("alphas_taken", [])
 	var p: Array = s.get("pos", [0, 0, 0])
 	player_pos = Vector3(float(p[0]), float(p[1]), float(p[2]))
 	if contracts.size() < 3:

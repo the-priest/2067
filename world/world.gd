@@ -164,6 +164,7 @@ func _process(dt: float) -> void:
 	_wild_ghouls(dt)
 	_xyla_check()
 	_dynamic_resolution(dt)
+	_alphas(dt)
 	if drone != null:
 		_drone_tick(dt)
 
@@ -244,7 +245,7 @@ func _spawn_herd(initial: bool = false) -> bool:
 	return false
 
 
-func spawn_herd(kind: String, at: Vector3, count: int = -1) -> Array:
+func spawn_herd(kind: String, at: Vector3, count: int = -1, alpha: String = "") -> Array:
 	var sp: Dictionary = Catalog.SPECIES[kind]
 	var hr: Array = sp["herd"]
 	var n := count if count > 0 else _rng.randi_range(int(hr[0]), int(hr[1]) + 1)
@@ -257,7 +258,7 @@ func spawn_herd(kind: String, at: Vector3, count: int = -1) -> Array:
 		var c := Creature.new()
 		c.name = "%s_%d_%d" % [kind, id, i]
 		add_child(c)
-		c.setup(self, kind, p, _rng.randi(), id)
+		c.setup(self, kind, p, _rng.randi(), id, alpha if i == 0 else "")
 		c.killed.connect(_on_killed)
 		creatures.append(c)
 		list.append(c)
@@ -365,6 +366,16 @@ func _on_killed(c: Creature, info: Dictionary) -> void:
 	Game.on_kill(c.species, heart, int(info["shots"]))
 	Game.say("%s: %s  +%d XP" % [verdict, c.name_text(), xp], Color(1.0, 0.85, 0.4) if heart else Color(0.9, 0.85, 0.75))
 	Game.journal("%s down (%s, %d shot%s)." % [c.name_text(), info["cause"].to_lower(), int(info["shots"]), "" if one else "s"])
+	if c.alpha_name != "":
+		var bounty := 800 + Game.rank() * 120
+		Game.add_scrip(bounty)
+		Game.add_xp(int(sp["xp"]) * 4)
+		Game.alphas_taken.append({"name": c.alpha_name, "species": c.species, "day": Game.day})
+		Game.alpha = {}
+		Game.journal("Took the alpha %s." % c.alpha_name)
+		if hud != null:
+			hud.call("record_banner", "alpha", c.alpha_name, float(c.horn["score"]), Catalog.horn_class(float(c.horn["score"]), c.species))
+		Game.say("ALPHA DOWN: %s  ·  bounty +%d scrip" % [c.alpha_name, bounty], Color(1.0, 0.8, 0.3))
 	if c.legendary:
 		Game.legend_down = true
 		Game.journal("THE IRONCROWN IS DOWN.")
@@ -395,7 +406,7 @@ func harvest(c: Creature) -> void:
 	var took := []
 	var full := false
 	if not c.harvested_hide:
-		var t := {"kind": "hide", "species": c.species, "quality": snappedf(c.hide_q, 0.1), "day": Game.day, "legend": c.legendary}
+		var t := {"kind": "hide", "species": c.species, "quality": snappedf(c.hide_q, 0.1), "day": Game.day, "legend": c.legendary, "alpha": c.alpha_name != ""}
 		if Game.carry(t):
 			c.harvested_hide = true
 			took.append("%s hide (%s)" % [c.name_text(), Catalog.hide_grade(c.hide_q)])
@@ -404,7 +415,7 @@ func harvest(c: Creature) -> void:
 	if not c.harvested_horn:
 		var score := float(c.horn["score"])
 		var cls := Catalog.horn_class(score, c.species)
-		var t2 := {"kind": "horn", "species": c.species, "score": score, "class": cls, "horn": c.horn, "day": Game.day, "legend": c.legendary}
+		var t2 := {"kind": "horn", "species": c.species, "score": score, "class": cls, "horn": c.horn, "day": Game.day, "legend": c.legendary, "alpha": c.alpha_name != "", "name": c.alpha_name}
 		if Game.carry(t2):
 			c.harvested_horn = true
 			took.append("%s %s: %.1f %s" % [c.name_text(), "fangs" if c.species == "howler" else "horns", score, cls])
@@ -822,7 +833,7 @@ func sleep() -> void:
 	var to := 6.0 if Game.time_of_day > 15.0 or Game.time_of_day < 5.0 else 19.0
 	if to == 6.0 and Game.time_of_day > 15.0:
 		Game.day += 1
-		Game.refresh_contracts()
+		Game.new_day()
 	Game.time_of_day = to
 	player.health = 100.0
 	Game.player_pos = structures.farm_spawn
@@ -1150,3 +1161,83 @@ func thrust(at: Vector3) -> void:
 	add_child(p)
 	p.global_position = at + Vector3(0, 0.3, 0)
 	get_tree().create_timer(1.0).timeout.connect(p.queue_free)
+
+
+
+# ---------------------------------------------------------------- alphas
+
+var _alpha_t := 30.0
+
+
+## Every couple of days a named alpha turns up somewhere in the valley. The
+## radio says where; it's on your map until somebody (you) takes it.
+func _alphas(dt: float) -> void:
+	_alpha_t -= dt
+	if _alpha_t > 0.0:
+		return
+	_alpha_t = 20.0
+	if Game.alpha.is_empty():
+		var last := 0
+		for a in Game.alphas_taken:
+			last = maxi(last, int(a["day"]))
+		if Game.day < 2 or Game.day - last < 2 or _rng.randf() > 0.25:
+			return
+		var opts: Array = []
+		for k in Catalog.ALPHAS.keys():
+			var tier := int(Catalog.SPECIES[k]["tier"])
+			if tier <= 2 + Game.rank() / 2:
+				opts.append(k)
+		if opts.is_empty():
+			return
+		var kind: String = opts[_rng.randi() % opts.size()]
+		var names: Array = Catalog.ALPHAS[kind]
+		var nm: String = names[_rng.randi() % names.size()]
+		var habs: Variant = Catalog.SPECIES[kind]["habitat"]
+		var hab: String = habs[_rng.randi() % (habs as Array).size()] if habs is Array else String(habs)
+		var spot := terrain.random_spot(_rng, hab)
+		if spot == Vector3.INF:
+			return
+		Game.alpha = {"name": nm, "species": kind, "pos": [spot.x, spot.y, spot.z], "day": Game.day}
+		if hud != null:
+			hud.call("radio", "Alpha sighting, small farm human! The one they call \"%s\", a %s, %s. The Exchange pays a bounty on alphas, and their horns are worth double. It's marked on your map." % [nm, Catalog.SPECIES[kind]["name"], _region_name(spot)])
+		Game.journal("Alpha sighted: %s (%s)." % [nm, Catalog.SPECIES[kind]["name"]])
+	# Keep it in the world when you're near enough.
+	var a: Dictionary = Game.alpha
+	if a.is_empty():
+		return
+	if Game.day - int(a["day"]) > 3:
+		Game.say("The alpha %s has moved on." % a["name"])
+		Game.alpha = {}
+		return
+	for c in creatures:
+		if (c as Creature).alpha_name == a["name"]:
+			return
+	var pa: Array = a["pos"]
+	var pos := Vector3(float(pa[0]), float(pa[1]), float(pa[2]))
+	if pos.distance_to(player.global_position) < 800.0:
+		spawn_herd(a["species"], pos, 3, a["name"])
+
+
+func alpha_pos() -> Vector3:
+	if Game.alpha.is_empty():
+		return Vector3.INF
+	for c in creatures:
+		if (c as Creature).alpha_name == Game.alpha["name"] and not (c as Creature).dead:
+			return (c as Creature).global_position
+	var pa: Array = Game.alpha["pos"]
+	return Vector3(float(pa[0]), float(pa[1]), float(pa[2]))
+
+
+func _region_name(p: Vector3) -> String:
+	match terrain.habitat_at(p.x, p.z):
+		"forest":
+			return "deep in the dead forest to the west"
+		"marsh":
+			return "out in the marsh by the lake"
+		"scrub":
+			return "in the eastern badlands"
+		"ridges":
+			return "up on the northern ridges"
+		"basin":
+			return "in the crash basin"
+	return "out on the open fields"

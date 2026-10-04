@@ -53,6 +53,7 @@ func _ready() -> void:
 	await _sights()
 	await _blink()
 	await _farm_defense()
+	await _alpha_market()
 	_save_load()
 	print("HUNT TEST DONE fails=%d" % fails)
 	get_tree().quit()
@@ -272,6 +273,28 @@ func _blink() -> void:
 	await get_tree().process_frame
 	_ok("R1 again blinks you there (moved %d m)" % int(from.distance_to(p.global_position)), not ok or p.global_position.distance_to(target) < 1.0)
 	_ok("and it has to recharge", p.blink_cool > 0.0 or not ok)
+
+
+func _alpha_market() -> void:
+	print("PHASE market & alphas")
+	Game.roll_market()
+	_ok("the Exchange has hot species today (%d)" % Game.hot_species().size(), Game.hot_species().size() >= 3)
+	var c := await _target("moorhorn", 35.0)
+	var h := world.spawn_herd("moorhorn", c.global_position + Vector3(6, 0, 0), 1, "Old Test")
+	var a: Creature = h[0]
+	a.set_physics_process(false)
+	Game.alpha = {"name": "Old Test", "species": "moorhorn", "pos": [0, 0, 0], "day": Game.day}
+	await _frames(2)
+	_ok("the alpha is bigger than the herd (%.2f vs %.2f)" % [a.size, c.size], a.size > c.size)
+	_ok("and the map knows where it is", world.alpha_pos().distance_to(a.global_position) < 0.1)
+	var s0 := Game.scrip
+	await _shoot_at(a, a.head.global_transform * Vector3(0, float(a.sp["body"]["head"]) * 0.08, 0))
+	for i in 200:
+		await get_tree().physics_frame
+		if a.dead:
+			break
+	_ok("the alpha goes down", a.dead)
+	_ok("and pays a bounty (+%d)" % (Game.scrip - s0), Game.scrip > s0 and Game.alpha.is_empty())
 
 
 func _farm_defense() -> void:

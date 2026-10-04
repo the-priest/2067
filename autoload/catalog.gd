@@ -265,6 +265,17 @@ const GEAR := {
 	"drone": {"name": "Recon Drone", "desc": "G: send it up, fly it, and it tags every hybrid it sees for a minute.", "rank": 7, "price": 7200},
 }
 
+## The alphas: one legend per species, every one with a name the valley
+## gave it.
+const ALPHAS := {
+	"moorhorn": ["Big Bertha", "The Deacon"], "stagwraith": ["Ghost of Pine Hollow", "Silvertine"],
+	"tuskmaw": ["Old Gutsplitter", "Mama Razor"], "ramspire": ["The Corkscrew King", "Widowmaker"],
+	"crownelk": ["The Lantern", "Old Chandelier"], "tigrath": ["Stripes McGee", "The Velvet Death"],
+	"ursagore": ["Sir Mauls-a-Lot", "Grandpa Grizzle"], "mammothar": ["The Landlord", "Tuskzilla"],
+	"rhinox": ["The Bulldozer", "Three-Horn Pete"], "girafflux": ["Neck Romancer", "The Lighthouse"],
+	"leonix": ["King Quillbert", "The Golden Mane"],
+}
+
 ## Hunter ranks: XP needed for each.
 const RANKS := [0, 150, 450, 1000, 1900, 3200, 5000, 7500, 11000, 16000]
 const RANK_NAMES := ["Farmhand", "Stalker", "Tracker", "Skinner", "Horn Hunter", "Ridge Runner", "Visitor-Slayer", "Crown Taker", "Wraith Walker", "Legend of the Valley"]

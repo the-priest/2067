@@ -37,6 +37,7 @@ var threat := Vector3.ZERO
 var tagged_until := 0.0
 var legendary := false
 var last_organ := ""
+var alpha_name := "" # a named legend
 
 var model: Node3D
 var skin: ShaderMaterial
@@ -80,7 +81,8 @@ const SHELLS := 4
 static var _shell_cache: Dictionary = {}
 
 
-func setup(w: Node, kind: String, at: Vector3, sd: int, herd: int) -> void:
+func setup(w: Node, kind: String, at: Vector3, sd: int, herd: int, alpha: String = "") -> void:
+	alpha_name = alpha
 	world = w
 	species = kind
 	sp = Catalog.SPECIES[kind]
@@ -91,8 +93,15 @@ func setup(w: Node, kind: String, at: Vector3, sd: int, herd: int) -> void:
 	size = clampf(_rng.randfn(1.1, 0.12), 0.85, 1.38)
 	if _rng.randf() < 0.06 and not legendary:
 		size = _rng.randf_range(1.38, 1.6) # an ancient trophy animal
+	if alpha_name != "":
+		size = _rng.randf_range(1.6, 1.85)
 	horn = Horns.roll(kind, _rng, size)
-	max_hp = float(sp["hp"]) * size * size
+	if alpha_name != "":
+		# An alpha's horns are the stuff of stories.
+		horn["alpha"] = true
+		horn["score"] = snappedf(float(horn["score"]) * _rng.randf_range(1.25, 1.5), 0.1)
+		horn["moss"] = true
+	max_hp = float(sp["hp"]) * size * size * (1.6 if alpha_name != "" else 1.0)
 	hp = max_hp
 	home = at
 	_heading = _rng.randf() * TAU
@@ -837,6 +846,8 @@ func glass_info() -> String:
 	var t := name_text()
 	if legendary:
 		t = "THE IRONCROWN"
+	if alpha_name != "":
+		t = "ALPHA \"%s\" (%s)" % [alpha_name, name_text()]
 	var sz := "young" if size < 1.0 else ("mature" if size < 1.2 else ("old" if size < 1.38 else "ANCIENT"))
 	var cls := Catalog.horn_class(float(horn["score"]), species)
 	if species == "howler":
